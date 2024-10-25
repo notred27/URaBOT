@@ -55,28 +55,47 @@ chrome.action.onClicked.addListener(async (tab) => {
 function injectClassification() {
     document.querySelectorAll('[data-testid="tweet"]').forEach(tweet => {
 
-        var innerDiv = document.createElement("div");
-        
-
-        var percentage = Math.random(); //FIXME: Assign the classification here
-
-
-
-        innerDiv.className = "rabot_check";
-        innerDiv.innerHTML = `<b>${(percentage * 100).toFixed(1)}%</b>`;
-
-
-        if (percentage < 0.5) {
-            innerDiv.style.border = `solid 5px rgb(${200 * percentage * 2}, 250, ${2 * percentage * 200})`;
-        } else {
-            innerDiv.style.border = `solid 5px rgb(250, ${220 - (percentage - 0.5) * 2 * 220}, ${220 - (percentage - 0.5) * 2 * 220})`;
-        }
+       
 
         if (tweet.getElementsByClassName("rabot_check").length == 0) {
             // Do not rerender tweet if it has already been assessed. 
             // (Maybe also keep list of tweets so you don't need to recompute on scroll back)
-            console.log(tweet.textContent);
+            
+            var handle = tweet.querySelector('[data-testid="User-Name"]').textContent.split("@");
+            var name = handle[0]
+
+            handle = handle[1].split("·")
+
+            var username = handle[0]
+            var date =  handle[handle.length - 1]
+            var tweetText = tweet.querySelector('[data-testid="tweetText"').textContent
+
+
+        
+
+            var percentage = Math.random(); //FIXME: Assign the classification here
+    
+            var innerDiv = document.createElement("div");
+            innerDiv.className = "rabot_check";
+            innerDiv.innerHTML = `<b>${(percentage * 100).toFixed(1)}%</b>`;
+    
+            if (percentage < 0.5) {
+                innerDiv.style.border = `solid 5px rgb(${200 * percentage * 2}, 250, ${2 * percentage * 200})`;
+            } else {
+                innerDiv.style.border = `solid 5px rgb(250, ${220 - (percentage - 0.5) * 2 * 220}, ${220 - (percentage - 0.5) * 2 * 220})`;
+            }
+
+
             tweet.appendChild(innerDiv);
+
+
+            console.log(name)
+            console.log(username)
+            console.log(date)
+            console.log(tweetText)
+
+
+
 
 
             // var spans = tweet.querySelectorAll('span');
