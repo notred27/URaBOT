@@ -1,0 +1,41 @@
+{
+    "manifest_version": 3,
+    "name": "URaBOT",
+    "version": "0.2.1",
+    "author": "notred27",
+    "description": "An extension for detecting and flagging bot content on Twitter.",
+    "icons": {
+        "16": "icons/icon16.png",
+        "32": "icons/icon32.png",
+        "38": "icons/icon38.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+    },
+    "action": {
+        "default_icon": "icons/icon128.png",
+        "default_popup": "index.html"
+    },
+    "background": {
+        "service_worker": "background.js"
+    },
+    "permissions": [
+        "activeTab",
+        "storage",
+        "scripting",
+        "tabs"
+    ],
+    "commands": {
+        "_execute_action": {
+            "suggested_key": {
+                "default": "Ctrl+B",
+                "mac": "Command+B"
+            }
+        }
+    },
+    "content_scripts": [
+        {
+            "matches": ["<all_urls>"],
+            "js": ["content.js"]
+        }
+    ]
+}

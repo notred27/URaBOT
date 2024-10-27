@@ -5,7 +5,6 @@
    Author Github URI: https://www.github.com/
    Project Repository URI: https://github.com/
    Description: The main UI for your Chrome Extension
-   License: MIT
 -->
 
 <!DOCTYPE html>
@@ -18,42 +17,36 @@
     <link href = "style.css" rel = "stylesheet" type = "text/css">
   </head>
   <body>
-    <script src = "scripts.js"></script>
-
-    
+    <!-- <script src = "scripts.js"></script> -->
 
     <h2>URaBOT</h2>
 
     <hr>
-    <button id = "TEST" onclick="change()">Click</button>
+    <!-- <button >Activate Service Workers</button> -->
 
     <span>
         Add bot estimate to Tweets.
 
-        <label class="switch">
-            <input type="checkbox">
+        <label  class="switch">
+            <input id = "activate_estimate" type="checkbox">
             <span class="slider round"></span>
         </label>
     </span>
 
     <br>
-    
     
     <span>
         Hide bot content.
 
-        <label class="switch">
-            <input type="checkbox">
+        <label  class="switch">
+            <input  id = "hide_bot_content" type="checkbox">
             <span class="slider round"></span>
         </label>
     </span>
     
-
     <br>
 
     <hr>
-
-
-
+    <script src="popup.js"></script>
   </body>
 </html>
