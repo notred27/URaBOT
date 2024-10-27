@@ -1,22 +1,16 @@
 // popup.js: Scripts for the popup window found in index.html
 
 
-
-// Load the checkbox state when the popup opens
+// Set slider checkbox values when loading the popup HTML
 chrome.storage.local.get(['activate_estimate'], (result) => {
     document.getElementById('activate_estimate').checked = result.activate_estimate;
 });
 
-
-
-// Load the checkbox state when the popup opens
 chrome.storage.local.get(['hide_bot_content'], (result) => {
     document.getElementById('hide_bot_content').checked = result.hide_bot_content;
 });
 
   
-
-
 // EventListener for slider that adds bot estimates to tweets
 document.getElementById('activate_estimate').addEventListener('click', () => {
     // Send a message to the service worker

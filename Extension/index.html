@@ -1,52 +1,65 @@
 <!--
    index.html
-   Author:
-   Author URI: https://
-   Author Github URI: https://www.github.com/
-   Project Repository URI: https://github.com/
-   Description: The main UI for your Chrome Extension
+   Author: notred27
+   Project Github: https://github.com/notred27/URaBOT
 -->
 
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-  <head>
-    <meta charset="utf-8">
-    <meta name = "viewport" content = "width=device-width, initial-scale = 1.0">
-    <meta http-equiv = "X-UA-Compatible" content = "ie=edge">
-    <title>DistractMeNot Chrome Extension</title>
-    <link href = "style.css" rel = "stylesheet" type = "text/css">
-  </head>
-  <body>
-    <!-- <script src = "scripts.js"></script> -->
 
-    <h2>URaBOT</h2>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale = 1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>URaBOT Chrome Extension</title>
+  <link href="style.css" rel="stylesheet" type="text/css">
+</head>
 
-    <hr>
-    <!-- <button >Activate Service Workers</button> -->
 
-    <span>
-        Add bot estimate to Tweets.
-
-        <label  class="switch">
-            <input id = "activate_estimate" type="checkbox">
-            <span class="slider round"></span>
-        </label>
+<body>
+<!-- Head Banner -->
+  <span style="display: flex; flex-direction: row; justify-content: center; align-items: center;">
+    <img src="icons/icon48.png" alt="URaBOT logo" style="width: 48px; height: 48px; border-radius: 4px;">
+    <span style="margin-left: 20px;">
+      <h2 style="margin: 0px;">URaBOT</h2>
+      <i>Bot detection for <a href="https://x.com/">Twitter (X)</a>. Created by Michael Reidy and Daniel Reilly.</i>
     </span>
+  </span>
 
-    <br>
-    
-    <span>
-        Hide bot content.
 
-        <label  class="switch">
-            <input  id = "hide_bot_content" type="checkbox">
-            <span class="slider round"></span>
-        </label>
-    </span>
-    
-    <br>
+  <hr>
+  <!-- Display Subsection -->
+  <h3>Display</h3>
 
-    <hr>
-    <script src="popup.js"></script>
-  </body>
+  <div id="settings_grid">
+    Add bot estimate to Tweets.
+
+    <label class="switch">
+      <input id="activate_estimate" type="checkbox">
+      <span class="slider round"></span>
+    </label>
+
+
+    Hide content that's likely produced by bots.
+
+    <label class="switch">
+      <input id="hide_bot_content" type="checkbox">
+      <span class="slider round"></span>
+    </label>
+  </div>
+
+
+  <hr>
+  <!-- Hidden Tweet Parameter Subsection -->
+  <h3>Hidden Tweets</h3>
+
+  <input type="range" min="0" max="100" value="50" step="5" list="steplist">
+
+  <datalist id="steplist">
+    <option>50</option>
+  </datalist>
+
+  <script src="popup.js"></script>
+</body>
+
 </html>

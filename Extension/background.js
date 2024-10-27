@@ -2,8 +2,6 @@
 const twitterURL = 'https://x.com/';
 
 
-
-
 // Set the badge text to OFF when the extension is initially loaded
 // Additionally set local variables to false
 chrome.runtime.onInstalled.addListener(async () => {
@@ -13,9 +11,6 @@ chrome.runtime.onInstalled.addListener(async () => {
 
     chrome.storage.local.set({'activate_estimate': false})
     chrome.storage.local.set({'hide_bot_content': false})
-
-
-    
 });
 
 
@@ -36,30 +31,40 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             });
         }
 
-        
+        // TODO: Create similar structure for hiding bot content
+        // const activate_estimate = await chrome.storage.local.get(['activate_estimate']);
+
+        // if(activate_estimate.activate_estimate) {
+        //     await chrome.scripting.executeScript({
+        //         target: { tabId: sender.tab.id },
+        //         func: injectClassification,
+        //     });
+        // }
+
     }
 });
 
 
 // Listen to see if the show estimate slider (from index.html) is used 
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
-    if (request.message === 'activate_estimate') {
+    if (request.message === 'activate_estimate' && request.tab.url.startsWith(twitterURL)) {
         chrome.storage.local.set({'activate_estimate': request.checked})
 
         if(request.checked) {
+            // Automatically injected estimates without need for scrolling
             await chrome.scripting.executeScript({
                 target: { tabId: request.tab.id },
                 func: injectClassification,
             });
+
         } else {
-            // TODO: Create a clean-up function for the injected estimates
+            // Clean-up function for the injected estimates
             await chrome.scripting.executeScript({
                 target: { tabId: request.tab.id },
                 func: cleanupClassification,
             });
             
         }
-
 
         // Check if the extension should be active
         await toggleActive(request.tab.id);
@@ -69,8 +74,10 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
 // Listen to see if the hide bot content slider (from index.html) is used 
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
-    if (request.message === 'hide_bot_content') {
+    if (request.message === 'hide_bot_content' && request.tab.url.startsWith(twitterURL)) {
         chrome.storage.local.set({'hide_bot_content': request.checked})
+
+        // TODO: Create functions for this feature
 
         // Check if the extension should be active
         await toggleActive(request.tab.id);
@@ -91,7 +98,7 @@ async function extensionIsActive() {
 
 
 
-// Function that changes both the badge text and injected css depending
+// Function that changes both the badge text and injected css depending on if the extension is active
 async function toggleActive(tabId) {
     const isActive = await extensionIsActive();
     const nextState = isActive ? 'ON' : 'OFF';
@@ -175,7 +182,7 @@ function injectClassification() {
 }
 
 
-
+// Function that removes all of the "rabot_check" divs that were injected into the page
 function cleanupClassification() {
     const elms = document.getElementsByClassName('rabot_check')
 
