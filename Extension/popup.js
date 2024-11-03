@@ -35,3 +35,41 @@ document.getElementById('hide_bot_content').addEventListener('click', () => {
         chrome.runtime.sendMessage({ message: 'hide_bot_content', tab: activeTab, checked: document.getElementById('hide_bot_content').checked });
     })
 });
+
+
+
+// EventListener for updating slider text
+document.getElementById('threshold_slider').addEventListener('input', () => {
+    // Update text 
+    document.getElementById('slider_val').innerHTML = document.getElementById('threshold_slider').value + "%";
+});
+
+
+document.getElementById('threshold_slider').addEventListener('change', () => {
+    // Update text 
+    document.getElementById('slider_val').innerHTML = document.getElementById('threshold_slider').value + "%";
+});
+
+
+
+document.getElementById('post_test').addEventListener('click', () => {
+    // Test out connection to flask backend
+    const formData = new FormData();
+    // formData.append('message', "This is the test!");
+    formData.append('username', "This is the test!");
+    formData.append('display_name', "This is the test!");
+    formData.append('tweet_content', "This is the test!");
+
+
+    fetch("http://127.0.0.1:5000/verify", {
+        method: "POST",
+        body: formData,
+
+    })
+    .then((response) => {
+        if(response["status"] == 200){  // Only continue if status is ok
+            return response.json();
+        }
+    })
+    .then((json) => console.log(json));
+});

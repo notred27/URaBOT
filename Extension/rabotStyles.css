@@ -13,3 +13,20 @@
   margin-right : 0px;
 }
 
+.rabot_disclaimer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color : #272727;
+  height : 60px;
+  width : 80%;
+  font-size:medium;
+  font-weight: 300;
+  text-align: center;
+ border-radius: 5px;
+ margin-top: 5px;
+}
+
+.rabot_disclaimer a{
+  color: aquamarine;
+}

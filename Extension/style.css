@@ -6,6 +6,11 @@ body {
   border-radius: 5px;
 }
 
+
+h3 {
+  margin:5px 0px 5px 0px;
+}
+
 /* The switch - the box around the slider */
 .switch {
   position: relative;
@@ -76,4 +81,11 @@ input:checked+.slider:before {
   row-gap: 5px;
   align-items: center;
 
+}
+
+#slider_grid {
+  display: grid;
+  grid-template-columns: 50% 50%;
+  row-gap: 5px;
+  align-items: center;
 }

@@ -53,13 +53,23 @@
   <!-- Hidden Tweet Parameter Subsection -->
   <h3>Hidden Tweets</h3>
 
-  <input type="range" min="0" max="100" value="50" step="5" list="steplist">
+  <div id="slider_grid">
+  <span>Hide Content Above: <span id = "slider_val">75%</span></span>
+  <input id = "threshold_slider" type="range" min="0" max="100" value="75" step="5" list="steplist">
 
   <datalist id="steplist">
-    <option>50</option>
+    <option>75</option>
   </datalist>
 
+</div>
+
+  <button id ="post_test">Test POST</button>
+
   <script src="popup.js"></script>
+
+
+
+
 </body>
 
 </html>
