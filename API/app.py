@@ -1,9 +1,10 @@
-from flask import Flask, request
+from flask import Flask, request, make_response
 from flask import jsonify
 from flask_cors import CORS, cross_origin   # Import CORS module
 import requests
 import dotenv
 import random
+from rich import print
 
 # python -m flask run
 
@@ -52,18 +53,25 @@ def verify():
 
     # Confirm that full payload was sent
     if 'username' not in request.form:
-        return {"Res" : "No username provided"}
+        return make_response(jsonify({"error": "Invalid request parameters.", "message" : "No username provided"}), 400)
+        
     
     if 'display_name' not in request.form:
-        return {"Res" : "No display_name provided"}
+        return make_response(jsonify({"error": "Invalid request parameters.", "message" : "No display_name provided"}), 400)
+        
     
     if 'tweet_content' not in request.form:
-        return {"Res" : "No tweet_content provided"}
+        return make_response(jsonify({"error": "Invalid request parameters.", "message" : "No tweet_content provided"}), 400)
+        
     
 
     # TODO: Classify data here
+    # print("[underline blue]" + request.form["display_name"] + " @ " + request.form["username"] + "[/underline blue]")
+    # print("[blue]" + request.form["tweet_content"] + "[/blue]\n")
+
+
     
-    return {"Percent": random.random()}
+    return jsonify({"percent": random.random()})
 
 
 if __name__ == '__main__':

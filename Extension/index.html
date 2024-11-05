@@ -17,7 +17,7 @@
 
 
 <body>
-<!-- Head Banner -->
+  <!-- Head Banner -->
   <span style="display: flex; flex-direction: row; justify-content: center; align-items: center;">
     <img src="icons/icon48.png" alt="URaBOT logo" style="width: 48px; height: 48px; border-radius: 4px;">
     <span style="margin-left: 20px;">
@@ -40,7 +40,7 @@
     </label>
 
 
-    Hide content that's likely produced by bots.
+    Hide content likely produced by bots.
 
     <label class="switch">
       <input id="hide_bot_content" type="checkbox">
@@ -54,16 +54,21 @@
   <h3>Hidden Tweets</h3>
 
   <div id="slider_grid">
-  <span>Hide Content Above: <span id = "slider_val">75%</span></span>
-  <input id = "threshold_slider" type="range" min="0" max="100" value="75" step="5" list="steplist">
+    <span>Hide Content Above: <span id="slider_val">75%</span></span>
+    <input id="threshold_slider" type="range" min="50" max="100" value="75" step="5" list="steplist">
 
-  <datalist id="steplist">
-    <option>75</option>
-  </datalist>
+    <datalist id="steplist">
+      <option>75</option>
+    </datalist>
 
-</div>
+  </div>
 
-  <button id ="post_test">Test POST</button>
+
+  <hr>
+
+  <h3>Debug</h3>
+
+  <button id="post_test">Test POST</button>
 
   <script src="popup.js"></script>
 

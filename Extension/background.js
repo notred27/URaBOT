@@ -14,89 +14,6 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 
-/**
- * Function that receives a message from content.js, and wakes up the service worker to
- * execute the classification injection function.
- */
-chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
-    if (request.message === 'user_scrolled' && sender.tab.url.startsWith(twitterURL) ) {
-
-        // Execute the HTML injection function in real-time as new tweets are loaded
-        await chrome.scripting.executeScript({
-            target: { tabId: sender.tab.id },
-            func: alterTweet,
-        });
-    }
-});
-
-
-// Listen to see if the show estimate slider (from index.html) is used 
-chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
-    if (request.message === 'activate_estimate' && request.tab.url.startsWith(twitterURL)) {
-        chrome.storage.local.set({'activate_estimate': request.checked})
-
-        if(request.checked) {
-            // Automatically injected estimates without need for scrolling
-            await chrome.scripting.executeScript({
-                target: { tabId: request.tab.id },
-                func: alterTweet,
-            });
-
-        } else {
-            // Clean-up function for the injected estimates
-            await chrome.scripting.executeScript({
-                target: { tabId: request.tab.id },
-                func: cleanupClassification,
-            });
-            
-        }
-
-        // Check if the extension should be active
-        await toggleActive(request.tab.id);
-    }
-});
-
-
-// Listen to see if the hide bot content slider (from index.html) is used 
-chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
-    if (request.message === 'hide_bot_content' && request.tab.url.startsWith(twitterURL)) {
-        chrome.storage.local.set({'hide_bot_content': request.checked})
-
-        if(request.checked) {
-            // Automatically injected estimates without need for scrolling
-            await chrome.scripting.executeScript({
-                target: { tabId: request.tab.id },
-                func: alterTweet,
-            });
-
-        } else {
-            // TODO: Create Clean-up function to reverse hiding tweet content
-            await chrome.scripting.executeScript({
-                target: { tabId: request.tab.id },
-                func: revertTweetRemoval,
-            });
-            
-        }
-
-        // Check if the extension should be active
-        await toggleActive(request.tab.id);
-    }
-});
-
-
-/**
- * Function that determines if the extension is currently active or not.
- * @returns Boolean (if the extension should be currently active)
- */
-async function extensionIsActive() {
-    const hide_bots = await chrome.storage.local.get(['hide_bot_content']);
-    const activate_estimate = await chrome.storage.local.get(['activate_estimate']);
-
-    return hide_bots.hide_bot_content || activate_estimate.activate_estimate;
-}
-
-
-
 // Function that changes both the badge text and injected css depending on if the extension is active
 async function toggleActive(tabId) {
     const isActive = await extensionIsActive();
@@ -129,178 +46,264 @@ async function toggleActive(tabId) {
 
 
 /**
- * Helper function that finds all currently loaded tweets, and assigns a classification and/or hides its content
+ * Function that receives a message from content.js, and wakes up the service worker to
+ * execute the classification injection function.
  */
-async function alterTweet() {
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+    if(request.message === 'user_scrolled' && sender.tab.url.startsWith(twitterURL)){
+
+        // Execute the HTML injection function in real-time as new tweets are loaded
+        await chrome.scripting.executeScript({
+            target: { tabId: sender.tab.id },
+            func: getEstimates,
+        })
+    }
+});
+
+
+
+/**
+ * Function that receives a message from the getEstimates function (which sends updated data)
+ * and processes HTML to be injected for newly received tweets.
+ */
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+    if (request.message === 'update_tweets') {
+
+        chrome.tabs.query({ active: true, lastFocusedWindow: true }, async (tabs) => {
+            // Get the active tab
+            const activeTab = tabs[0];  
+    
+            // Check for valid context 
+            if(activeTab.url.startsWith(twitterURL)) {
+                // Execute the HTML injection function for hiding bot content
+                await chrome.scripting.executeScript({
+                    target: { tabId: activeTab.id },
+                    func: hideContent,
+                });
+
+
+                // Execute the HTML injection function for adding tweet classifications
+                await chrome.scripting.executeScript({
+                    target: { tabId: activeTab.id },
+                    func: addClassification,
+                });
+
+
+
+            }
+        })
+    }
+});
+
+
+
+
+
+
+// Listen to see if the show estimate switch (from index.html) is used 
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+    if (request.message === 'activate_estimate' && request.tab.url.startsWith(twitterURL)) {
+        chrome.storage.local.set({'activate_estimate': request.checked}).then(() => {
+         
+            if(request.checked) {
+                // Automatically injected estimates without need for scrolling
+                chrome.scripting.executeScript({
+                    target: { tabId: request.tab.id },
+                    func: getEstimates,
+                });
+
+            } else {
+                // Clean-up function for the injected estimates
+                chrome.scripting.executeScript({
+                    target: { tabId: request.tab.id },
+                    func: cleanupClassification,
+                });
+                
+            }
+        });
+
+        
+
+        // Check if the extension should be active
+        await toggleActive(request.tab.id);
+    }
+});
+
+
+// Listen to see if the hide bot content slider (from index.html) is used 
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+    if (request.message === 'hide_bot_content' && request.tab.url.startsWith(twitterURL)) {
+        chrome.storage.local.set({'hide_bot_content': request.checked}).then(async () => {
+             if(request.checked) {
+                // Automatically injected estimates without need for scrolling
+                await chrome.scripting.executeScript({
+                    target: { tabId: request.tab.id },
+                    func: getEstimates,
+                });
+
+            } else {
+                // TODO: Create Clean-up function to reverse hiding tweet content
+                await chrome.scripting.executeScript({
+                    target: { tabId: request.tab.id },
+                    func: revertTweetRemoval,
+                });
+            }
+        });
+       
+        // Check if the extension should be active
+        await toggleActive(request.tab.id);
+    }
+});
+
+
+/**
+ * Function that determines if the extension is currently active or not.
+ * @returns Boolean (if the extension should be currently active)
+ */
+async function extensionIsActive() {
     const hide_bots = await chrome.storage.local.get(['hide_bot_content']);
     const activate_estimate = await chrome.storage.local.get(['activate_estimate']);
-    
-    // Find all tweets that are currently loaded in the browser 
+
+    return hide_bots.hide_bot_content || activate_estimate.activate_estimate;
+}
+
+
+
+
+
+
+
+
+
+// ##########  FUNCTIONS TO IMPLEMENT  ##########
+
+
+
+async function getEstimates() {
+    // IDEA: Maybe also keep list of tweets so you don't need to recompute on scroll back
+    const foundTweets = [];
+
+    // Get current state of the extension
+    const hide_bots = await chrome.storage.local.get(['hide_bot_content']);
+    const activate_estimate = await chrome.storage.local.get(['activate_estimate']);
+
+    const allPromises = []
+
+
     document.querySelectorAll('[data-testid="tweet"]').forEach(tweet => {
 
         // Do not rerender tweet if it has already been assessed. 
-        // IDEA: Maybe also keep list of tweets so you don't need to recompute on scroll back
-
-        
         // TODO: Improve the efficiency of using these two boolean values
         if ((tweet.getElementsByClassName("rabot_check").length == 0 && activate_estimate.activate_estimate) || (tweet.getElementsByClassName("rabot_disclaimer").length == 0 && hide_bots.hide_bot_content)) {
-            // Scrape tweet data
-            try {
-                var handle = tweet.querySelector('[data-testid="User-Name"]').textContent.split("@");
-                var name = handle[0]
+            
+            try { // Scrape tweet data
+                const handle = tweet.querySelector('[data-testid="User-Name"]').textContent.split("@");
+                const name = handle[0]
+                const username = handle[1].split("·")[0]
+                // const date = handle[handle.length - 1]   // Probably don't need this
 
-                handle = handle[1].split("·")
+                const psudoId = tweet.getAttribute("aria-labelledby").split(" ")[0];
 
-                var username = handle[0]
-                // var date = handle[handle.length - 1]   // Probably don't need this
-
+                // FIXME: Just check if this is null instead of another try/catch
                 try {
                     var tweetText = tweet.querySelector('[data-testid="tweetText"').textContent
                 } catch (error) {
                     var tweetText = ""
                 }
                 
-                // TEMP: Log these metrics to the console for now
-                // console.log(name)
-                // console.log(username)
-                // // console.log(date)
-                // console.log(tweetText)
 
+                // TODO: Make this batched to reduce # of connections to the API
+                // Construct API payload
                 const tweetForm = new FormData();
                 tweetForm.append('username', username);
                 tweetForm.append('display_name', name);
                 tweetForm.append('tweet_content', tweetText);
 
-                fetch("http://127.0.0.1:5000/verify", {
+
+                const fetchPromise = fetch("http://127.0.0.1:5000/verify", {
                     method: "POST",
                     body: tweetForm,
             
-                })
-                .then((response) => {
-                    if(response["status"] == 200){  // Only continue if status is ok
-                        return response.json();
-                    }                       // TODO: Handel error codes here
-                })
-                .then((json) => {
-                    console.log(json)
-                    percent = json.percent  // TODO: Incorporate this response into the classification below
-                
-                });
+                    })
+                    .then((response) => {
+                        if(response["status"] == 200){  // Only continue if status is ok
+                            return response.json();
+                        }                       // TODO: Handel error codes here
+                    })
+                    .then((json) => { 
+                        // Add each tweet to the array with its prediction
+                        foundTweets.push({tweetId:psudoId, score: json.percent})
+                    });
 
-                
+                allPromises.push(fetchPromise);
 
             } catch (error) {   //TODO: Create a better handler for this
                 console.log(error)
             }
 
+        }})
 
-            var percent = Math.random(); //TODO: Assign the classification here
+        // Wait for all promises to resolve and send the data to local storage
+        Promise.all(allPromises)
+        .then(() => {
+
+            // Send data & message back to extension so multiple scripts can process this data
+            chrome.storage.local.set({found_tweets: foundTweets}).then(() => {
+                chrome.runtime.sendMessage({message:'update_tweets'});
+            });
+        })     
+}
 
 
-            // FIXME: Find a way to make these helper functions and take them outside??
-            // Create HTML to be injected into the tweet
 
-            /**
-             * Hide bot content
-             */
 
-            if(hide_bots.hide_bot_content) {
-                // Get all divs from the base tweet
-                const content = tweet.getElementsByTagName("div");
 
-                // Hide all of the tweet's content
-                for(let i = 0; i < content.length; i++) {
-                    if(content[i] != null){
-                        content[i].style.display = "none";
+/**
+ * Create HTML content to represent the classification and inject it into the site.
+ */
+async function addClassification() {
+    // Fetch stored tweet data in chrome's local storage
+    chrome.storage.local.get(['found_tweets'], async (result) => {
+        if (chrome.runtime.lastError) {
+            console.error("Error retrieving data:", chrome.runtime.lastError);
+
+        } else {
+            const foundTweets = result.found_tweets; // Get the id and score of most recent tweets
+            const activate_estimate = await chrome.storage.local.get(['activate_estimate']);
+
+            foundTweets.forEach(data => {
+
+                // Find the tweet by its psudoId
+                const tweet = document.querySelector('[aria-labelledby*="' + data.tweetId + '"]')
+
+                if(tweet == null) { // Case where tweet can no longer be found...
+                    return;
+                }
+
+                // Check if it already has a clasification
+                if(tweet.getElementsByClassName("rabot_check").length == 0 && activate_estimate.activate_estimate) {
+                    const percent = data.score; // Bot estimation score provided by our classifier
+
+                    // Create HTML elements to be injected 
+                    var classificationDiv = document.createElement("div");
+                    classificationDiv.className = "rabot_check";
+                    classificationDiv.innerHTML = `<b>${(percent * 100).toFixed(1)}%</b>`;
+
+                    // Set the color of the classification's border depending on value
+                    if (data.score < 0.5) {
+                        classificationDiv.style.border = `solid 5px rgb(${200 * percent * 2}, 250, ${2 * percent * 200})`;
+                    } else {
+                        classificationDiv.style.border = `solid 5px rgb(250, ${220 - (percent - 0.5) * 2 * 220}, ${220 - (percent - 0.5) * 2 * 220})`;
                     }
+
+                    // Inject the HTML onto the page
+                    tweet.appendChild(classificationDiv);
                 }
-
-                // Add disclaimer
-                var disclaimerDiv = document.createElement("div");
-                disclaimerDiv.className = "rabot_disclaimer";
-                disclaimerDiv.innerHTML = `This tweet was likely created by a bot. `;
-
-                var disclaimerLink = document.createElement("a");
-                disclaimerLink.innerHTML = `Show Anyways...`;
-                disclaimerDiv.appendChild(disclaimerLink);
-
-                // Inject the HTML
-                tweet.appendChild(disclaimerDiv);
-
-
-                tweet.style.height = "200px"    // TEMP: Resize tweet for more reasonable functionality 
-
-            }
-
-
-            /**
-             * Add bot classification
-             */
-            if(activate_estimate.activate_estimate){
-                var classificationDiv = document.createElement("div");
-                classificationDiv.className = "rabot_check";
-                classificationDiv.innerHTML = `<b>${(percent * 100).toFixed(1)}%</b>`;
-
-                // Set the color of the classification's border depending on value
-                if (percent < 0.5) {
-                    classificationDiv.style.border = `solid 5px rgb(${200 * percent * 2}, 250, ${2 * percent * 200})`;
-                } else {
-                    classificationDiv.style.border = `solid 5px rgb(250, ${220 - (percent - 0.5) * 2 * 220}, ${220 - (percent - 0.5) * 2 * 220})`;
-                }
-
-                // Inject the HTML
-                tweet.appendChild(classificationDiv);
-            }
+            });
         }
     });
 }
 
-// /**
-//  * Create HTML content to represent the classification and inject it into the site
-//  * @param {HTMLDivElement} tweet HTML that represents a tweet
-//  * @param {Number} percent       Decimal representation of our bot classification. Higher == more likely to be a bot.
-//  */
-// function addEstimate(tweet, percent) {
-//     // Create HTML to be injected into the tweet
-//     var classificationDiv = document.createElement("div");
-//     classificationDiv.className = "rabot_check";
-//     classificationDiv.innerHTML = `<b>${(percent * 100).toFixed(1)}%</b>`;
-
-//     // Set the color of the classification's border depending on value
-//     if (percent < 0.5) {
-//         classificationDiv.style.border = `solid 5px rgb(${200 * percent * 2}, 250, ${2 * percent * 200})`;
-//     } else {
-//         classificationDiv.style.border = `solid 5px rgb(250, ${220 - (percent - 0.5) * 2 * 220}, ${220 - (percent - 0.5) * 2 * 220})`;
-//     }
-
-//     // Inject the HTML
-//     tweet.appendChild(classificationDiv);
-// }
-
-// /**
-//  * Hide HTML content from tweets that are likely from bots
-//  * @param {HTMLDivElement} tweet HTML that represents a tweet
-//  * @param {Number} percent       Decimal representation of our bot classification. Higher == more likely to be a bot.
-//  */
-// function hideContent(tweet, percent) {
-//     // Get all divs from the base tweet
-//     const content = tweet.getElementsByTagName("div");
-
-//     // Hide all of the tweet's content
-//     for(let i = 0; i < content.length; i++) {
-//         if(content[i] != null){
-//             content[i].style.display = "none";
-//         }
-//     }
-
-//     // Add disclaimer
-//     var disclaimerDiv = document.createElement("div");
-//     disclaimerDiv.className = "rabot_check";
-//     disclaimerDiv.innerHTML = `<b>This tweet was likely created by a bot. <a>Show anyways...</a></b>`;
-
-//     // Inject the HTML
-//     tweet.appendChild(disclaimerDiv);
-// }
 
 // Function that removes all of the "rabot_check" divs that were injected into the page
 function cleanupClassification() {
@@ -310,6 +313,81 @@ function cleanupClassification() {
         elms[0].remove()
     }
 }
+
+
+
+
+/**
+ * Hide HTML content from tweets that are likely from bots.
+ */
+
+async function hideContent() {
+    // Fetch stored tweet data in chrome's local storage
+    chrome.storage.local.get(['found_tweets'], async (result) => {
+        if (chrome.runtime.lastError) {
+            console.error("Error retrieving data:", chrome.runtime.lastError);
+
+        } else {
+            const foundTweets = result.found_tweets; // Get the id and score of most recent tweets
+            const hide_bots = await chrome.storage.local.get(['hide_bot_content']);
+
+            const threshold = 0.5   // TODO: Implement this with the extension slider
+
+            foundTweets.forEach(data => {
+
+                // Find the tweet by its psudoId
+                const tweet = document.querySelector('[aria-labelledby*="' + data.tweetId + '"]')
+
+                if(tweet == null) { // Case where tweet can no longer be found...
+                    return;
+                }
+
+
+                // Check if it already has a clasification
+                if(tweet.getElementsByClassName("rabot_disclaimer").length == 0 && hide_bots.hide_bot_content) {
+
+                    if(data.score > threshold){
+                        // Get all divs from the base tweet
+                        const content = tweet.getElementsByTagName("div");
+
+                        // Hide all of the tweet's content
+                        for(let i = 0; i < content.length; i++) {
+                            if(content[i] != null && content[i].className !== "rabot_check"){  // FIXME: This still hides tweet classifications
+                                
+                                content[i].style.display = "none";
+                            }
+                        }
+
+                        // Add disclaimer
+                        var disclaimerDiv = document.createElement("div");
+                        disclaimerDiv.className = "rabot_disclaimer";
+                        disclaimerDiv.innerHTML = `<span>This Tweet was likely created by a bot.&nbsp;<a>Show anyways...</a></span>`;
+
+                        tweet.style.height = "200px"; // TEMP: fix to prevent too many re-renders
+
+                        // Inject the HTML
+                        tweet.appendChild(disclaimerDiv);
+
+
+                    } else {    //FIXME: hack to prevent tweet from getting reclassified
+                        // Add disclaimer
+                        var disclaimerDiv = document.createElement("div");
+                        disclaimerDiv.className = "rabot_disclaimer";
+                        disclaimerDiv.style.width = "0px";
+                        disclaimerDiv.style.height = "0px";
+
+
+                        // Inject the HTML
+                        tweet.appendChild(disclaimerDiv);
+
+
+                    }
+                }
+            });
+        }
+    });
+}
+
 
 
 // Function that removes all of the "rabot_check" divs that were injected into the page
@@ -327,8 +405,10 @@ function revertTweetRemoval() {
         // Show all of the tweet's content
         for(let i = 0; i < content.length; i++) {
             if(content[i] != null){
-                content[i].style.display = "inline";
+                content[i].style.display = "";
             }
         }
+        
+        tweet.style.height = ""
     });
 }

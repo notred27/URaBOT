@@ -3,6 +3,8 @@
   background-color : black;
   height : 40px;
   width : 40px;
+  min-width : 40px;
+
   border-radius : 40px;
   font-size : 0.65em;
   text-align : center;
@@ -17,7 +19,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color : #272727;
+  background-color : #1b1929;
   height : 60px;
   width : 80%;
   font-size:medium;
@@ -25,8 +27,17 @@
   text-align: center;
  border-radius: 5px;
  margin-top: 5px;
+ color: white;
+
 }
 
 .rabot_disclaimer a{
-  color: aquamarine;
+  color: rgb(56, 162, 255);
+  padding: 3px;
+  border-radius: 3px;
+}
+
+
+.rabot_disclaimer a:hover {
+  background-color: #413d5a;
 }
