@@ -6,7 +6,6 @@ import dotenv
 import random
 from rich import print
 
-# python -m flask run
 
 app = Flask(__name__)
 # Set up CORS control (tmp for localhost)
