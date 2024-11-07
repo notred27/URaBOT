@@ -21,15 +21,15 @@ HTML in the browser
 ## Tasks
 **Main Tasks**
 - [x] Gather and pre-process data
-- [] Build models
-- [] Deploy models in API endpoint
+- [ ] Build models
+- [ ] Deploy models in API endpoint
 
 - [x] Build extension base
 - [x] Build RESTful API endpoint
-- [] Host API endpoint
+- [ ] Host API endpoint
 
 **Future Tasks**
-- [] Extend functionality to other social media sites (Instagram, BlueSky, Facebook, etc.)
+- [ ] Extend functionality to other social media sites (Instagram, BlueSky, Facebook, etc.)
 
 
 ## How to Run
