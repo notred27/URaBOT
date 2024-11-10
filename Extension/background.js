@@ -204,13 +204,23 @@ async function getEstimates() {
 
                 const psudoId = tweet.getAttribute("aria-labelledby").split(" ")[0];
 
+                const isVerified = tweet.getAttribute("aria-labelledby").split(" ")[0];
+
+                // TODO:  Count number of mentions?
+
                 // FIXME: Just check if this is null instead of another try/catch
-                try {
-                    var tweetText = tweet.querySelector('[data-testid="tweetText"').textContent
-                } catch (error) {
-                    var tweetText = ""
-                }
+                // try {
+                //     var tweetText = tweet.querySelector('[data-testid="tweetText"').textContent
+                // } catch (error) {
+                //     var tweetText = ""
+                // }
                 
+                var tweetText = ""
+
+                if(tweet.querySelector('[data-testid="tweetText"') != null) {
+                    tweetText = tweet.querySelector('[data-testid="tweetText"').textContent
+                    
+                }
 
                 // TODO: Make this batched to reduce # of connections to the API
                 // Construct API payload
@@ -219,6 +229,7 @@ async function getEstimates() {
                 tweetForm.append('display_name', name);
                 tweetForm.append('tweet_content', tweetText);
 
+                console.log(tweetText)  // TEMP: Code for testing during development
 
                 const fetchPromise = fetch("http://127.0.0.1:5000/verify", {
                     method: "POST",
@@ -343,7 +354,7 @@ async function hideContent() {
                 }
 
 
-                // Check if it already has a clasification
+                // Check if it already has a classification
                 if(tweet.getElementsByClassName("rabot_disclaimer").length == 0 && hide_bots.hide_bot_content) {
 
                     if(data.score > threshold){
