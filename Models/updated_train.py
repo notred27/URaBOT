@@ -15,7 +15,7 @@ from transformers import AutoModel, AutoModelForSequenceClassification, AutoConf
 MODEL_NAME = 'microsoft/deberta-v3-base'
 
 # Load pre-trained models and tokenizers
-model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels = 3)
+model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels = 2)
 config = AutoConfig.from_pretrained(MODEL_NAME)
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
