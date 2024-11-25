@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 from torch.optim import AdamW
 import torch
 from tqdm.auto import tqdm
+import pandas as pd
 
 from transformers import AutoModel, AutoModelForSequenceClassification, AutoConfig, AutoTokenizer
 MODEL_NAME = 'microsoft/deberta-v3-base'
@@ -17,7 +18,14 @@ tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
 
 #  Load the dataset 
-dataset = load_dataset("tweet_eval", name="sentiment")
+# dataset = load_dataset("tweet_eval", name="sentiment")
+
+
+
+df = pd.read_csv("CSC277Project\\train\\train_dataset.csv")
+
+# Assuming the column containing the strings is named "text"
+dataset = df["Tweet"].tolist()
 
 
 def tokenize_function(examples):
