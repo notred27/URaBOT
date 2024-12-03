@@ -1,3 +1,4 @@
+# API imports
 from flask import Flask, request, make_response
 from flask import jsonify
 from flask_cors import CORS, cross_origin   # Import CORS module
@@ -5,6 +6,28 @@ import requests
 import dotenv
 import random
 from rich import print
+
+# Model imports
+from transformers import AutoModelForSequenceClassification, AutoConfig, AutoTokenizer
+import numpy as np
+import torch
+
+MODEL_NAME = "URaBOT2024/debertaV3_FT"
+
+
+# Load pre-trained models and tokenizers
+model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels = 2)
+config = AutoConfig.from_pretrained(MODEL_NAME)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+
+
+# Set hardware target
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+model.to(device)
+
+
+
+
 
 
 app = Flask(__name__)
@@ -68,9 +91,19 @@ def verify():
     # print("[underline blue]" + request.form["display_name"] + " @ " + request.form["username"] + "[/underline blue]")
     # print("[blue]" + request.form["tweet_content"] + "[/blue]\n")
 
-    print(request.form["psudo_id"])
+# x['description'] = x["description"] + tokenizer.sep_token + x["screen_name"] + tokenizer.sep_token + str(int(x["verified"])) + tokenizer.sep_token + str(x["favourites_count"])
+
+    input = request.form["tweet_content"] + tokenizer.sep_token + request.form["display_name"]
+    tokenized_input = tokenizer(input, return_tensors='pt', padding=True, truncation=True).to(device)
+
+    outputs = model(**tokenized_input)
     
-    return jsonify({"percent": random.random()})
+    label = np.argmax(outputs.logits.detach().numpy(), axis=-1).item()
+    print("Classification: ", label)
+    
+
+    # FIXME: currently just returns a random value
+    return jsonify({"percent":label })
 
 
 if __name__ == '__main__':

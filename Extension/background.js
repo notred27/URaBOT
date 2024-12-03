@@ -228,6 +228,8 @@ async function getEstimates() {
                 tweetForm.append('username', username);
                 tweetForm.append('display_name', name);
                 tweetForm.append('tweet_content', tweetText);
+                tweetForm.append('psudo_id', psudoId);
+
 
                 console.log(tweetText)  // TEMP: Code for testing during development
 
@@ -280,10 +282,11 @@ async function addClassification() {
 
         } else {
             const foundTweets = result.found_tweets; // Get the id and score of most recent tweets
+
+            console.log(foundTweets)
             const activate_estimate = await chrome.storage.local.get(['activate_estimate']);
 
             foundTweets.forEach(data => {
-
                 // Find the tweet by its psudoId
                 const tweet = document.querySelector('[aria-labelledby*="' + data.tweetId + '"]')
 
