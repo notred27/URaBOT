@@ -13,15 +13,28 @@ to detect bot-generated content on the browser version of Twitter. Our applicati
 classifiers (MLP, RoBERTa, TinyBERT), and Chromium extension that can access our model and make corresponding changes to 
 HTML in the browser
 
-## Dataset and Methods
+## Dataset and Models
 
+### Dataset:
 
+- [HF Human vs Bot Dataset](https://huggingface.co/datasets/airt-ml/twitter-human-bots): A dataset containing **21,450** English tweets which are labeled as either a human or a bot.
 
+### Encoder Models:
+
+- [MoritzLaurer/DeBERTa-v3-xsmall-mnli-fever-anli-ling-binary](https://huggingface.co/MoritzLaurer/DeBERTa-v3-xsmall-mnli-fever-anli-ling-binary): A small version of DebertaV3 that has been fine-tuned for binary classification
+
+- [microsoft/deberta-v3-base](https://huggingface.co/microsoft/deberta-v3-base): The base version of Microsoft's DebertaV3
+
+- [distilbert/distilbert-base-uncased](https://huggingface.co/distilbert/distilbert-base-uncased): A small BERT model intended for fine-tuning on sequence classification that is not case-sensitive
+
+## Methods
 
 ## Tasks
 **Main Tasks**
 - [x] Gather and pre-process data
-- [ ] Build models
+- [x] Build base models
+- [ ] Test metrics on models and fine-tune
+- [ ] Preform Platt-Scaling to calibrate model
 - [ ] Deploy models in API endpoint
 
 - [x] Build extension base
@@ -34,12 +47,17 @@ HTML in the browser
 
 ## How to Run
 
-The base Chrome extension can be enabled by **loading an unpacked extension** at [chrome://extensions/](chrome://extensions/). 
+### Loading the Application:
+The base Chrome extension can be enabled by **loading an unpacked extension** at [chrome://extensions/](chrome://extensions/). Ensure that `Developer mode` has been enabled.
+
+For more help, check out additional information [here.](https://knowledge.workspace.google.com/kb/load-unpacked-extensions-000005962)
+
+### Locally Hosting the API:
 
 
-To host the API locally, run the following Python script:
+To host the API locally, navigate into the `API` folder run the following Python script:
 ```bash
     python -m flask run
 ```
 
-- Ensure that Flask is installed 
+- Ensure that the requirements from `requirements.txt` are met
