@@ -1,3 +1,4 @@
+# API imports
 from flask import Flask, request, make_response
 from flask import jsonify
 from flask_cors import CORS, cross_origin   # Import CORS module
@@ -5,6 +6,28 @@ import requests
 import dotenv
 import random
 from rich import print
+
+# Model imports
+from transformers import AutoModelForSequenceClassification, AutoConfig, AutoTokenizer
+import numpy as np
+import torch
+
+MODEL_NAME = "URaBOT2024/debertaV3_FT"
+
+
+# Load pre-trained models and tokenizers
+model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels = 2)
+config = AutoConfig.from_pretrained(MODEL_NAME)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+
+
+# Set hardware target
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+model.to(device)
+
+
+
+
 
 
 app = Flask(__name__)
@@ -46,6 +69,8 @@ payload:
     "tweet_content": the text content of the tweet
 '''
 
+processed_tweets = []
+
 @app.route('/verify', methods=['POST','OPTIONS'])
 @cross_origin(origin='*',headers=['Content-Type','Authorization'])  # Account for CORS
 def verify():
@@ -62,15 +87,23 @@ def verify():
     if 'tweet_content' not in request.form:
         return make_response(jsonify({"error": "Invalid request parameters.", "message" : "No tweet_content provided"}), 400)
         
+    if request.form["psudo_id"] in processed_tweets:
+        # Prevent multiple requests for the same tweet
+        return make_response(jsonify({"error": "Invalid request, tweet is already processed/being processed"}), 400)
+
+    processed_tweets.append(request.form["psudo_id"])
+
+    input = request.form["tweet_content"] + tokenizer.sep_token + request.form["display_name"]
+    tokenized_input = tokenizer(input, return_tensors='pt', padding=True, truncation=True).to(device)
+
+    outputs = model(**tokenized_input)
+    
+    label = np.argmax(outputs.logits.detach().numpy(), axis=-1).item()
+    print("Classification: ", label)
     
 
-    # TODO: Classify data here
-    # print("[underline blue]" + request.form["display_name"] + " @ " + request.form["username"] + "[/underline blue]")
-    # print("[blue]" + request.form["tweet_content"] + "[/blue]\n")
-
-    print(request.form["psudo_id"])
-    
-    return jsonify({"percent": random.random()})
+    # FIXME: change this so it doesn't just return strictly binary values (0/1)
+    return jsonify({"percent":label })
 
 
 if __name__ == '__main__':

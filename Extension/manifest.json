@@ -32,6 +32,9 @@
             }
         }
     },
+    "host_permissions": [
+    "https://x.com/*"
+    ],
     "content_scripts": [
         {
             "matches": ["https://x.com/*"],

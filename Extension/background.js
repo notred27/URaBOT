@@ -33,6 +33,8 @@ async function toggleActive(tabId) {
             target: { tabId: tabId},
         });
 
+        await chrome.storage.local.set({process_tweets: {"test":0}});
+
     } else if (nextState === "OFF") {
         // Remove the CSS file when the user turns the extension off
         await chrome.scripting.removeCSS({
@@ -73,6 +75,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             // Get the active tab
             const activeTab = tabs[0];  
     
+            // console.log(activeTab)
             // Check for valid context 
             if(activeTab.url.startsWith(twitterURL)) {
                 // Execute the HTML injection function for hiding bot content
@@ -186,15 +189,24 @@ async function getEstimates() {
     // Get current state of the extension
     const hide_bots = await chrome.storage.local.get(['hide_bot_content']);
     const activate_estimate = await chrome.storage.local.get(['activate_estimate']);
+    let tweet_dict = await chrome.storage.local.get(['process_tweets']);
+    // console.log(tweet_dict.process_tweets)
 
     const allPromises = []
 
 
-    document.querySelectorAll('[data-testid="tweet"]').forEach(tweet => {
+    // tweet_dict["lmnop"] = -1
+    // chrome.storage.local.set({process_tweets: tweet_dict}).then(() => {
+    //     chrome.storage.local.get(['process_tweets'], async (result) => {
+    //         console.log(result.process_tweets)
+    //     })
+    // });
 
+    document.querySelectorAll('[data-testid="tweet"]').forEach(async tweet => {
+        const psudoId = tweet.getAttribute("aria-labelledby").split(" ")[0];
         // Do not rerender tweet if it has already been assessed. 
         // TODO: Improve the efficiency of using these two boolean values
-        if ((tweet.getElementsByClassName("rabot_check").length == 0 && activate_estimate.activate_estimate) || (tweet.getElementsByClassName("rabot_disclaimer").length == 0 && hide_bots.hide_bot_content)) {
+        if (!(psudoId in tweet_dict.process_tweets)) {
             
             try { // Scrape tweet data
                 const handle = tweet.querySelector('[data-testid="User-Name"]').textContent.split("@");
@@ -202,7 +214,11 @@ async function getEstimates() {
                 const username = handle[1].split("·")[0]
                 // const date = handle[handle.length - 1]   // Probably don't need this
 
-                const psudoId = tweet.getAttribute("aria-labelledby").split(" ")[0];
+                
+
+                tweet_dict.process_tweets[psudoId] = -1
+                await chrome.storage.local.set({process_tweets: tweet_dict.process_tweets})
+
 
                 const isVerified = tweet.getAttribute("aria-labelledby").split(" ")[0];
 
@@ -231,7 +247,7 @@ async function getEstimates() {
                 tweetForm.append('psudo_id', psudoId);
 
 
-                console.log(tweetText)  // TEMP: Code for testing during development
+                // console.log(tweetText)  // TEMP: Code for testing during development
 
                 const fetchPromise = fetch("http://127.0.0.1:5000/verify", {
                     method: "POST",
@@ -245,13 +261,20 @@ async function getEstimates() {
                     })
                     .then((json) => { 
                         // Add each tweet to the array with its prediction
+                        tweet_dict.process_tweets[psudoId] = json.percent
+
+
+                        chrome.storage.local.set({process_tweets: tweet_dict.process_tweets}).then(() => {
+                            chrome.runtime.sendMessage({message:'update_tweets'});
+                        });
+
                         foundTweets.push({tweetId:psudoId, score: json.percent})
                     });
 
                 allPromises.push(fetchPromise);
 
             } catch (error) {   //TODO: Create a better handler for this
-                console.log(error)
+                console.error(error)
             }
 
         }})
@@ -261,9 +284,9 @@ async function getEstimates() {
         .then(() => {
 
             // Send data & message back to extension so multiple scripts can process this data
-            chrome.storage.local.set({found_tweets: foundTweets}).then(() => {
-                chrome.runtime.sendMessage({message:'update_tweets'});
-            });
+            // chrome.storage.local.set({found_tweets: foundTweets}).then(() => {
+            //     chrome.runtime.sendMessage({message:'update_tweets'});
+            // });
         })     
 }
 
@@ -275,28 +298,30 @@ async function getEstimates() {
  * Create HTML content to represent the classification and inject it into the site.
  */
 async function addClassification() {
+    console.log("Adding classification")
     // Fetch stored tweet data in chrome's local storage
-    chrome.storage.local.get(['found_tweets'], async (result) => {
+    chrome.storage.local.get(['process_tweets'], async (result) => {
         if (chrome.runtime.lastError) {
             console.error("Error retrieving data:", chrome.runtime.lastError);
 
         } else {
-            const foundTweets = result.found_tweets; // Get the id and score of most recent tweets
+            const foundTweets = result.process_tweets; // Get the id and score of most recent tweets
 
-            console.log(foundTweets)
+            const tweetIds = Object.keys(foundTweets)
+            console.log("found tweets: ", tweetIds)
             const activate_estimate = await chrome.storage.local.get(['activate_estimate']);
 
-            foundTweets.forEach(data => {
+            tweetIds.forEach(id => {
                 // Find the tweet by its psudoId
-                const tweet = document.querySelector('[aria-labelledby*="' + data.tweetId + '"]')
+                const tweet = document.querySelector('[aria-labelledby*="' + id + '"]')
 
-                if(tweet == null) { // Case where tweet can no longer be found...
+                if(tweet == null || foundTweets[id] == -1) { // Case where tweet can no longer be found... || case where tweet isn't ready
                     return;
                 }
 
                 // Check if it already has a clasification
                 if(tweet.getElementsByClassName("rabot_check").length == 0 && activate_estimate.activate_estimate) {
-                    const percent = data.score; // Bot estimation score provided by our classifier
+                    const percent = foundTweets[id]; // Bot estimation score provided by our classifier
 
                     // Create HTML elements to be injected 
                     var classificationDiv = document.createElement("div");
@@ -304,7 +329,7 @@ async function addClassification() {
                     classificationDiv.innerHTML = `<b>${(percent * 100).toFixed(1)}%</b>`;
 
                     // Set the color of the classification's border depending on value
-                    if (data.score < 0.5) {
+                    if (percent < 0.5) {
                         classificationDiv.style.border = `solid 5px rgb(${200 * percent * 2}, 250, ${2 * percent * 200})`;
                     } else {
                         classificationDiv.style.border = `solid 5px rgb(250, ${220 - (percent - 0.5) * 2 * 220}, ${220 - (percent - 0.5) * 2 * 220})`;
