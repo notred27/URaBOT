@@ -2,9 +2,6 @@
 from flask import Flask, request, make_response
 from flask import jsonify
 from flask_cors import CORS, cross_origin   # Import CORS module
-import requests
-import dotenv
-import random
 from rich import print
 
 # Model imports
@@ -14,6 +11,7 @@ import torch
 
 MODEL_NAME = "URaBOT2024/debertaV3_FT"
 
+print("Starting Flask backend with model:", MODEL_NAME)
 
 # Load pre-trained models and tokenizers
 model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels = 2)
@@ -21,34 +19,25 @@ config = AutoConfig.from_pretrained(MODEL_NAME)
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
 
-# Set hardware target
+# Set hardware target for model
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 model.to(device)
+model.eval()    # Set model to evaluation mode
 
 
-
-
-
-
+# Set up the Flask app
 app = Flask(__name__)
 # Set up CORS control (tmp for localhost)
 CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})  # Target to allow trafic from
 app.config['CORS_HEADERS'] = 'Content-Type'
 
 
-
-@app.route('/')
-def hello():
-    return "Hello, World!"
-
-
+#TODO: Remove these?
 # Test endpoint for GET requests
 @app.route('/ping', methods=['GET'])
 @cross_origin(origin='*',headers=['Content-Type','Authorization'])  # Account for CORS
 def ping():
     return {"message": "pong"}
-
-
 
 # Test endpoint for POST requests, returns whatever is sent to the endpoint (payload: {"message": message to return})
 @app.route('/echo', methods=['POST','OPTIONS'])
@@ -61,50 +50,69 @@ def echo():
 
 
 
-# Main Endpoint for URaBOT, a POST request that takes in a tweet's data and returns a "bot" score
-'''
-payload:
-         "username": the profile's username (@tag)
-     "display_name": the profiles display name
-    "tweet_content": the text content of the tweet
-'''
-
+# TODO: GC for when this list gets too large?
 processed_tweets = []
 
 @app.route('/verify', methods=['POST','OPTIONS'])
 @cross_origin(origin='*',headers=['Content-Type','Authorization'])  # Account for CORS
 def verify():
+    '''
+    Main Endpoint for URaBOT, a POST request that takes in a tweet's data and returns a "bot" score
+
+    Returns: JSON object {"percent": double} 
+    
+    payload:
+        "psudo_id": the temporary id of the tweet (as assigned in local HTML from Twitter)
+        "username": the profile's username (@tag)
+        "display_name": the profiles display name
+        "tweet_content": the text content of the tweet
+    '''
+
+    #========== Error codes ==========#
 
     # Confirm that full payload was sent
     if 'username' not in request.form:
         return make_response(jsonify({"error": "Invalid request parameters.", "message" : "No username provided"}), 400)
         
-    
     if 'display_name' not in request.form:
         return make_response(jsonify({"error": "Invalid request parameters.", "message" : "No display_name provided"}), 400)
         
-    
     if 'tweet_content' not in request.form:
         return make_response(jsonify({"error": "Invalid request parameters.", "message" : "No tweet_content provided"}), 400)
         
+    # Prevent multiple requests for the same tweet
     if request.form["psudo_id"] in processed_tweets:
-        # Prevent multiple requests for the same tweet
-        return make_response(jsonify({"error": "Invalid request, tweet is already processed/being processed"}), 400)
+        return make_response(jsonify({"error": "Conflict, tweet is already being/has been processed"}), 409)
 
+
+    #========== Resolve Multiple Requests ==========#
+
+    # Add tweet to internal (backend) process list
     processed_tweets.append(request.form["psudo_id"])
 
+
+    #========== Return Classification ==========#
+
+    # Process the tweet through the model
     input = request.form["tweet_content"] + tokenizer.sep_token + request.form["display_name"]
     tokenized_input = tokenizer(input, return_tensors='pt', padding=True, truncation=True).to(device)
 
-    outputs = model(**tokenized_input)
+    with torch.no_grad():
+        outputs = model(**tokenized_input)
     
+    # Determine classification
+    sigmoid = (1 / (1 + np.exp(-outputs.logits.detach().numpy()))).tolist()
     label = np.argmax(outputs.logits.detach().numpy(), axis=-1).item()
-    print("Classification: ", label)
-    
 
-    # FIXME: change this so it doesn't just return strictly binary values (0/1)
-    return jsonify({"percent":label })
+    # print("Classification: ", label, sigmoid)
+
+    # Return sigmoid-ish value for classification. Can instead return label for strict 0/1 binary classification
+    if label == 0:
+        return jsonify({"percent": 1 -  sigmoid[0][0]})
+    else:
+        return jsonify({"percent": sigmoid[0][1] })
 
 
+# Start the server
 if __name__ == '__main__':
     app.run(debug=True)

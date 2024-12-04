@@ -33,9 +33,9 @@ HTML in the browser
 **Main Tasks**
 - [x] Gather and pre-process data
 - [x] Build base models
-- [ ] Test metrics on models and fine-tune
-- [ ] Preform Platt-Scaling to calibrate model
-- [ ] Deploy models in API endpoint
+- [ ] Test metrics on models and fine-tune (confidence intervals)
+- [ ] Perform Platt-Scaling to calibrate model
+- [x] Deploy models in API endpoint
 
 - [x] Build extension base
 - [x] Build RESTful API endpoint

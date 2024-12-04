@@ -11,6 +11,8 @@ chrome.runtime.onInstalled.addListener(async () => {
 
     chrome.storage.local.set({'activate_estimate': false})
     chrome.storage.local.set({'hide_bot_content': false})
+    chrome.storage.local.set({'bot_threshold': 0.75})
+
 });
 
 
@@ -60,7 +62,13 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             func: getEstimates,
         })
     }
+
+    if (request.message === 'set_bot_threshold'){
+        console.log("Update threshold: " + request.val)
+        await chrome.storage.local.set({bot_threshold: request.val / 100})
+    }
 });
+
 
 
 
@@ -183,29 +191,14 @@ async function extensionIsActive() {
 
 
 async function getEstimates() {
-    // IDEA: Maybe also keep list of tweets so you don't need to recompute on scroll back
-    const foundTweets = [];
+    const foundTweets = []; // Local tweets from this batch
+    let tweet_dict = await chrome.storage.local.get(['process_tweets']);    // All tweets that have been found so far
+    const allPromises = [];  // List of promises to process
 
-    // Get current state of the extension
-    const hide_bots = await chrome.storage.local.get(['hide_bot_content']);
-    const activate_estimate = await chrome.storage.local.get(['activate_estimate']);
-    let tweet_dict = await chrome.storage.local.get(['process_tweets']);
-    // console.log(tweet_dict.process_tweets)
-
-    const allPromises = []
-
-
-    // tweet_dict["lmnop"] = -1
-    // chrome.storage.local.set({process_tweets: tweet_dict}).then(() => {
-    //     chrome.storage.local.get(['process_tweets'], async (result) => {
-    //         console.log(result.process_tweets)
-    //     })
-    // });
-
+// Search through all currently rendered tweets
     document.querySelectorAll('[data-testid="tweet"]').forEach(async tweet => {
         const psudoId = tweet.getAttribute("aria-labelledby").split(" ")[0];
         // Do not rerender tweet if it has already been assessed. 
-        // TODO: Improve the efficiency of using these two boolean values
         if (!(psudoId in tweet_dict.process_tweets)) {
             
             try { // Scrape tweet data
@@ -215,30 +208,20 @@ async function getEstimates() {
                 // const date = handle[handle.length - 1]   // Probably don't need this
 
                 
-
-                tweet_dict.process_tweets[psudoId] = -1
+                tweet_dict.process_tweets[psudoId] = -1 // Set val to -1 to signal that this tweet has been found
                 await chrome.storage.local.set({process_tweets: tweet_dict.process_tweets})
 
 
                 const isVerified = tweet.getAttribute("aria-labelledby").split(" ")[0];
 
                 // TODO:  Count number of mentions?
-
-                // FIXME: Just check if this is null instead of another try/catch
-                // try {
-                //     var tweetText = tweet.querySelector('[data-testid="tweetText"').textContent
-                // } catch (error) {
-                //     var tweetText = ""
-                // }
                 
                 var tweetText = ""
-
                 if(tweet.querySelector('[data-testid="tweetText"') != null) {
                     tweetText = tweet.querySelector('[data-testid="tweetText"').textContent
-                    
                 }
 
-                // TODO: Make this batched to reduce # of connections to the API
+                // TODO: Make this batched to reduce # of connections to the API?
                 // Construct API payload
                 const tweetForm = new FormData();
                 tweetForm.append('username', username);
@@ -247,7 +230,6 @@ async function getEstimates() {
                 tweetForm.append('psudo_id', psudoId);
 
 
-                // console.log(tweetText)  // TEMP: Code for testing during development
 
                 const fetchPromise = fetch("http://127.0.0.1:5000/verify", {
                     method: "POST",
@@ -258,6 +240,7 @@ async function getEstimates() {
                         if(response["status"] == 200){  // Only continue if status is ok
                             return response.json();
                         }                       // TODO: Handel error codes here
+                        // return Promise.reject(response["status"])
                     })
                     .then((json) => { 
                         // Add each tweet to the array with its prediction
@@ -281,13 +264,6 @@ async function getEstimates() {
 
         // Wait for all promises to resolve and send the data to local storage
         Promise.all(allPromises)
-        .then(() => {
-
-            // Send data & message back to extension so multiple scripts can process this data
-            // chrome.storage.local.set({found_tweets: foundTweets}).then(() => {
-            //     chrome.runtime.sendMessage({message:'update_tweets'});
-            // });
-        })     
 }
 
 
@@ -298,7 +274,6 @@ async function getEstimates() {
  * Create HTML content to represent the classification and inject it into the site.
  */
 async function addClassification() {
-    console.log("Adding classification")
     // Fetch stored tweet data in chrome's local storage
     chrome.storage.local.get(['process_tweets'], async (result) => {
         if (chrome.runtime.lastError) {
@@ -308,7 +283,7 @@ async function addClassification() {
             const foundTweets = result.process_tweets; // Get the id and score of most recent tweets
 
             const tweetIds = Object.keys(foundTweets)
-            console.log("found tweets: ", tweetIds)
+            // console.log("found tweets: ", tweetIds)
             const activate_estimate = await chrome.storage.local.get(['activate_estimate']);
 
             tweetIds.forEach(id => {
@@ -355,37 +330,38 @@ function cleanupClassification() {
 
 
 
-
 /**
- * Hide HTML content from tweets that are likely from bots.
+ * Inject HTML to content from tweets that are likely from bots (if slider is set for this).
  */
-
 async function hideContent() {
     // Fetch stored tweet data in chrome's local storage
-    chrome.storage.local.get(['found_tweets'], async (result) => {
+    chrome.storage.local.get(['process_tweets'], async (result) => {
         if (chrome.runtime.lastError) {
             console.error("Error retrieving data:", chrome.runtime.lastError);
 
         } else {
-            const foundTweets = result.found_tweets; // Get the id and score of most recent tweets
+            const foundTweets = result.process_tweets; // Get the id and score of most recent tweets
             const hide_bots = await chrome.storage.local.get(['hide_bot_content']);
+            const tweetIds = Object.keys(foundTweets)
 
-            const threshold = 0.5   // TODO: Implement this with the extension slider
+            // Get current threshold (as set by user)
+            const threshold = await chrome.storage.local.get(['bot_threshold']);
 
-            foundTweets.forEach(data => {
+            tweetIds.forEach(id => {
+
 
                 // Find the tweet by its psudoId
-                const tweet = document.querySelector('[aria-labelledby*="' + data.tweetId + '"]')
+                const tweet = document.querySelector('[aria-labelledby*="' + id + '"]')
 
-                if(tweet == null) { // Case where tweet can no longer be found...
+                if(tweet == null || foundTweets[id] == -1) { // Case where tweet can no longer be found...
                     return;
                 }
 
 
-                // Check if it already has a classification
+                // Check if it already has a classification (FIXME?)
                 if(tweet.getElementsByClassName("rabot_disclaimer").length == 0 && hide_bots.hide_bot_content) {
 
-                    if(data.score > threshold){
+                    if(foundTweets[id] > threshold.bot_threshold){
                         // Get all divs from the base tweet
                         const content = tweet.getElementsByTagName("div");
 
@@ -397,10 +373,53 @@ async function hideContent() {
                             }
                         }
 
+                        var btn = document.createElement("button");
+                        btn.innerText = "Show anyways...";
+
+                        // Add event listener to show the tweet "Show anyways..." button
+                        btn.addEventListener("click", function(event) {
+                            event.preventDefault(); // Prevent the default anchor action (e.g., page scroll)
+
+                            // Restore the tweet's content
+                            const tweet = document.querySelector('[aria-labelledby*="' + id + '"]');
+
+                            if (tweet != null) {
+                                // Get all divs from the base tweet
+                                const content = tweet.getElementsByTagName("div");
+
+                                // Show all the tweet's hidden content
+                                for (let i = 0; i < content.length; i++) {
+                                    if (content[i] != null && content[i].className !== "rabot_check") {
+                                        content[i].style.display = ""; // Reset display to original state
+                                    }
+                                }
+
+                                // Remove disclaimer
+                                const elms = tweet.getElementsByClassName('rabot_disclaimer')[0].remove()
+
+
+                                // Revert height
+                                tweet.style.height = ""
+
+
+                                // Hack: prevent relabeling
+                                var disclaimerDiv = document.createElement("div");
+                                disclaimerDiv.className = "rabot_disclaimer";
+                                disclaimerDiv.style.width = "0px";
+                                disclaimerDiv.style.height = "0px";
+
+
+                                // Inject the HTML
+                                tweet.appendChild(disclaimerDiv);
+
+                            }
+                        });
+
                         // Add disclaimer
                         var disclaimerDiv = document.createElement("div");
                         disclaimerDiv.className = "rabot_disclaimer";
-                        disclaimerDiv.innerHTML = `<span>This Tweet was likely created by a bot.&nbsp;<a>Show anyways...</a></span>`;
+                        disclaimerDiv.innerHTML = `<span>This Tweet was likely created by a bot.&nbsp;</span>`;
+                        disclaimerDiv.appendChild(btn);
 
                         tweet.style.height = "200px"; // TEMP: fix to prevent too many re-renders
 
@@ -418,14 +437,13 @@ async function hideContent() {
 
                         // Inject the HTML
                         tweet.appendChild(disclaimerDiv);
-
-
                     }
                 }
             });
         }
     });
 }
+
 
 
 
