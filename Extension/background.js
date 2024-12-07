@@ -3,7 +3,7 @@ const twitterURL = 'https://x.com/';
 
 
 // Set the badge text to OFF when the extension is initially loaded
-// Additionally set local variables to false
+// Additionally set local variables when initially loaded
 chrome.runtime.onInstalled.addListener(async () => {
     chrome.action.setBadgeText({
         text: "OFF",
@@ -12,7 +12,9 @@ chrome.runtime.onInstalled.addListener(async () => {
     chrome.storage.local.set({'activate_estimate': false})
     chrome.storage.local.set({'hide_bot_content': false})
     chrome.storage.local.set({'bot_threshold': 0.75})
+    chrome.storage.local.set({process_tweets: {"test":0}});
 
+    
 });
 
 
@@ -35,7 +37,6 @@ async function toggleActive(tabId) {
             target: { tabId: tabId},
         });
 
-        await chrome.storage.local.set({process_tweets: {"test":0}});
 
     } else if (nextState === "OFF") {
         // Remove the CSS file when the user turns the extension off
@@ -51,7 +52,7 @@ async function toggleActive(tabId) {
 
 /**
  * Function that receives a message from content.js, and wakes up the service worker to
- * execute the classification injection function.
+ * execute the relevant classification injection function.
  */
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     if(request.message === 'user_scrolled' && sender.tab.url.startsWith(twitterURL)){
@@ -83,7 +84,6 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             // Get the active tab
             const activeTab = tabs[0];  
     
-            // console.log(activeTab)
             // Check for valid context 
             if(activeTab.url.startsWith(twitterURL)) {
                 // Execute the HTML injection function for hiding bot content
@@ -92,22 +92,15 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
                     func: hideContent,
                 });
 
-
                 // Execute the HTML injection function for adding tweet classifications
                 await chrome.scripting.executeScript({
                     target: { tabId: activeTab.id },
                     func: addClassification,
                 });
-
-
-
             }
         })
     }
 });
-
-
-
 
 
 
@@ -129,11 +122,8 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
                     target: { tabId: request.tab.id },
                     func: cleanupClassification,
                 });
-                
             }
         });
-
-        
 
         // Check if the extension should be active
         await toggleActive(request.tab.id);
@@ -153,7 +143,6 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
                 });
 
             } else {
-                // TODO: Create Clean-up function to reverse hiding tweet content
                 await chrome.scripting.executeScript({
                     target: { tabId: request.tab.id },
                     func: revertTweetRemoval,
@@ -186,51 +175,65 @@ async function extensionIsActive() {
 
 
 
-// ##########  FUNCTIONS TO IMPLEMENT  ##########
+//===========// Functions for HTML injection //===========//
 
-
-
+// Search for currently loaded tweets in the browser, and make a request to the API for classification
 async function getEstimates() {
+    const allPromises = [];  // List of promises that will be processed
     const foundTweets = []; // Local tweets from this batch
     let tweet_dict = await chrome.storage.local.get(['process_tweets']);    // All tweets that have been found so far
-    const allPromises = [];  // List of promises to process
 
-// Search through all currently rendered tweets
+    // Search through all currently rendered tweets
     document.querySelectorAll('[data-testid="tweet"]').forEach(async tweet => {
         const psudoId = tweet.getAttribute("aria-labelledby").split(" ")[0];
-        // Do not rerender tweet if it has already been assessed. 
-        if (!(psudoId in tweet_dict.process_tweets)) {
+        
+        if (!(psudoId in tweet_dict.process_tweets)) { // Don't rerender processed tweets 
             
             try { // Scrape tweet data
                 const handle = tweet.querySelector('[data-testid="User-Name"]').textContent.split("@");
                 const name = handle[0]
                 const username = handle[1].split("·")[0]
-                // const date = handle[handle.length - 1]   // Probably don't need this
-
                 
                 tweet_dict.process_tweets[psudoId] = -1 // Set val to -1 to signal that this tweet has been found
                 await chrome.storage.local.set({process_tweets: tweet_dict.process_tweets})
 
-
-                const isVerified = tweet.getAttribute("aria-labelledby").split(" ")[0];
-
-                // TODO:  Count number of mentions?
+                let isVerified = false;
+                if(tweet.querySelector('[aria-label="Verified account"]') != null) {
+                    isVerified = true
+                }
                 
                 var tweetText = ""
                 if(tweet.querySelector('[data-testid="tweetText"') != null) {
                     tweetText = tweet.querySelector('[data-testid="tweetText"').textContent
                 }
 
+                // Format likes to integers
+                var likes = ""
+                if(tweet.querySelector('[data-testid="like"') != null) {
+                    likes = tweet.querySelector('[data-testid="like"').textContent
+
+                    if(likes.charAt(likes.length-1) == 'K') {
+                        likes = parseFloat(likes.substring(0, likes.length-1)) * 1000
+
+                    } else if (likes.charAt(likes.length-1) == 'M') {
+                        likes = parseFloat(likes.substring(0, likes.length-1)) * 1000000
+                    }
+                }
+
+
+
                 // TODO: Make this batched to reduce # of connections to the API?
                 // Construct API payload
                 const tweetForm = new FormData();
+                tweetForm.append('psudo_id', psudoId);
                 tweetForm.append('username', username);
                 tweetForm.append('display_name', name);
                 tweetForm.append('tweet_content', tweetText);
-                tweetForm.append('psudo_id', psudoId);
+                tweetForm.append('is_verified', isVerified);
+                tweetForm.append('likes', likes);
 
 
-
+                // Create fetch requests to the API endpoint
                 const fetchPromise = fetch("http://127.0.0.1:5000/verify", {
                     method: "POST",
                     body: tweetForm,
@@ -239,13 +242,11 @@ async function getEstimates() {
                     .then((response) => {
                         if(response["status"] == 200){  // Only continue if status is ok
                             return response.json();
-                        }                       // TODO: Handel error codes here
-                        // return Promise.reject(response["status"])
+                        }                       
                     })
                     .then((json) => { 
                         // Add each tweet to the array with its prediction
                         tweet_dict.process_tweets[psudoId] = json.percent
-
 
                         chrome.storage.local.set({process_tweets: tweet_dict.process_tweets}).then(() => {
                             chrome.runtime.sendMessage({message:'update_tweets'});
@@ -262,16 +263,14 @@ async function getEstimates() {
 
         }})
 
-        // Wait for all promises to resolve and send the data to local storage
+        // Wait for all promises to resolve, then send the data to local storage
         Promise.all(allPromises)
 }
 
 
 
-
-
 /**
- * Create HTML content to represent the classification and inject it into the site.
+ * Create HTML content to represent the bot estimation classification and inject it into the site.
  */
 async function addClassification() {
     // Fetch stored tweet data in chrome's local storage
@@ -280,17 +279,20 @@ async function addClassification() {
             console.error("Error retrieving data:", chrome.runtime.lastError);
 
         } else {
-            const foundTweets = result.process_tweets; // Get the id and score of most recent tweets
-
+            // Get the id of the most recent tweets
+            const foundTweets = result.process_tweets; 
             const tweetIds = Object.keys(foundTweets)
-            // console.log("found tweets: ", tweetIds)
+
+            // Check if this feature should be active from popup.js
             const activate_estimate = await chrome.storage.local.get(['activate_estimate']);
 
             tweetIds.forEach(id => {
+
                 // Find the tweet by its psudoId
                 const tweet = document.querySelector('[aria-labelledby*="' + id + '"]')
 
-                if(tweet == null || foundTweets[id] == -1) { // Case where tweet can no longer be found... || case where tweet isn't ready
+                // Case where tweet can no longer be found... || case where tweet isn't ready
+                if(tweet == null || foundTweets[id] == -1) { 
                     return;
                 }
 
@@ -340,25 +342,28 @@ async function hideContent() {
             console.error("Error retrieving data:", chrome.runtime.lastError);
 
         } else {
-            const foundTweets = result.process_tweets; // Get the id and score of most recent tweets
-            const hide_bots = await chrome.storage.local.get(['hide_bot_content']);
+            // Get the id and score of most recent tweets
+            const foundTweets = result.process_tweets; 
             const tweetIds = Object.keys(foundTweets)
 
             // Get current threshold (as set by user)
             const threshold = await chrome.storage.local.get(['bot_threshold']);
 
-            tweetIds.forEach(id => {
+            // Check to see if this feature should be active (as set in popup.js)
+            const hide_bots = await chrome.storage.local.get(['hide_bot_content']);
 
+
+            tweetIds.forEach(id => {
 
                 // Find the tweet by its psudoId
                 const tweet = document.querySelector('[aria-labelledby*="' + id + '"]')
 
-                if(tweet == null || foundTweets[id] == -1) { // Case where tweet can no longer be found...
+                // Case where tweet can no longer be found... || tweet hasn't been processed
+                if(tweet == null || foundTweets[id] == -1) { 
                     return;
                 }
 
-
-                // Check if it already has a classification (FIXME?)
+                // Check if it already has a classification
                 if(tweet.getElementsByClassName("rabot_disclaimer").length == 0 && hide_bots.hide_bot_content) {
 
                     if(foundTweets[id] > threshold.bot_threshold){
@@ -368,11 +373,11 @@ async function hideContent() {
                         // Hide all of the tweet's content
                         for(let i = 0; i < content.length; i++) {
                             if(content[i] != null && content[i].className !== "rabot_check"){  // FIXME: This still hides tweet classifications
-                                
                                 content[i].style.display = "none";
                             }
                         }
 
+                        // Create a button to revert hiding this tweet, and create show function
                         var btn = document.createElement("button");
                         btn.innerText = "Show anyways...";
 
@@ -397,10 +402,8 @@ async function hideContent() {
                                 // Remove disclaimer
                                 const elms = tweet.getElementsByClassName('rabot_disclaimer')[0].remove()
 
-
                                 // Revert height
                                 tweet.style.height = ""
-
 
                                 // Hack: prevent relabeling
                                 var disclaimerDiv = document.createElement("div");
@@ -408,12 +411,11 @@ async function hideContent() {
                                 disclaimerDiv.style.width = "0px";
                                 disclaimerDiv.style.height = "0px";
 
-
                                 // Inject the HTML
                                 tweet.appendChild(disclaimerDiv);
-
                             }
                         });
+
 
                         // Add disclaimer
                         var disclaimerDiv = document.createElement("div");
@@ -434,7 +436,6 @@ async function hideContent() {
                         disclaimerDiv.style.width = "0px";
                         disclaimerDiv.style.height = "0px";
 
-
                         // Inject the HTML
                         tweet.appendChild(disclaimerDiv);
                     }
@@ -445,17 +446,16 @@ async function hideContent() {
 }
 
 
-
-
 // Function that removes all of the "rabot_check" divs that were injected into the page
 function revertTweetRemoval() {
+    // Remove the disclaimer divs
     const elms = document.getElementsByClassName('rabot_disclaimer')
-
     while(elms.length > 0){
         elms[0].remove()
     }
 
-    //  FIXME: Don't just hide every div, make them all the child of a new div and toggle that display to hidden / block
+
+    // Show the original content
     document.querySelectorAll('[data-testid="tweet"]').forEach(tweet => {
         const content = tweet.getElementsByTagName("div");
 
@@ -466,6 +466,7 @@ function revertTweetRemoval() {
             }
         }
         
+        // Set tweets hight to its previous value
         tweet.style.height = ""
     });
 }

@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "URaBOT",
-    "version": "0.4.2",
+    "version": "0.4.3",
     "author": "notred27",
     "description": "An extension for detecting and flagging bot content on Twitter.",
     "icons": {

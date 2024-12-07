@@ -94,7 +94,7 @@ def verify():
     #========== Return Classification ==========#
 
     # Process the tweet through the model
-    input = request.form["tweet_content"] + tokenizer.sep_token + request.form["display_name"]
+    input = request.form["tweet_content"] + tokenizer.sep_token + request.form["display_name"] + tokenizer.sep_token +  request.form["is_verified"] + tokenizer.sep_token +  request.form["likes"]
     tokenized_input = tokenizer(input, return_tensors='pt', padding=True, truncation=True).to(device)
 
     with torch.no_grad():
