@@ -104,7 +104,6 @@ def verify():
     sigmoid = (1 / (1 + np.exp(-outputs.logits.detach().numpy()))).tolist()
     label = np.argmax(outputs.logits.detach().numpy(), axis=-1).item()
 
-    # print("Classification: ", label, sigmoid)
 
     # Return sigmoid-ish value for classification. Can instead return label for strict 0/1 binary classification
     if label == 0:

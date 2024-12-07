@@ -34,7 +34,7 @@ HTML in the browser
 - [x] Gather and pre-process data
 - [x] Build base models
 - [ ] Test metrics on models and fine-tune (confidence intervals)
-- [ ] Perform Platt-Scaling to calibrate model
+- [x] Perform Platt-Scaling to calibrate model
 - [x] Deploy models in API endpoint
 
 - [x] Build extension base

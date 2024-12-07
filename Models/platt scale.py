@@ -1,17 +1,12 @@
 import numpy as np
 from sklearn.calibration import calibration_curve
 import matplotlib.pyplot as plt
-
 from torch.utils.data import DataLoader, TensorDataset
-
-
 import torch
-from tqdm import tqdm
 from torch import nn, optim
 
 # Set seed for data splitting
 np.random.seed(42)
-
 
 # Load the .npy file
 logits = np.load('Models\\trained_models\\debertaV3logits.npy')
@@ -35,7 +30,6 @@ sigmoid = np.array(sigmoid)
 # Pair the output with their label
 stacked = np.column_stack((sigmoid, labels))
 
-
 n = 2145 # Split data in half for test and eval
 
 # Get random indices to split the eval dataset
@@ -44,10 +38,6 @@ unselected_indices = np.setdiff1d(np.arange(stacked.shape[0]), idx)  # Find the 
 
 val = stacked[idx]
 test = stacked[unselected_indices]
-
-
-
-
 
 # Basic regression model to get A and B for Platt Scaling
 class LogisticRegressionModel(nn.Module):
@@ -124,7 +114,7 @@ plt.plot(prob_pred, prob_true, marker='o')
 plt.plot([0, 1], [0, 1], linestyle='--')  # Diagonal line
 plt.xlabel('Mean Predicted Probability')
 plt.ylabel('Fraction of Positives')
-plt.title('Reliability Curve of Fine-Tuned RoBERTa V3 Base')
+plt.title('Reliability Curve of Fine-Tuned DeBERTa V3 Base')
 plt.show()
 
 prob_true, prob_pred = calibration_curve(column_arrays[1], scaled, n_bins=10, pos_label=(1))
@@ -132,5 +122,5 @@ plt.plot(prob_pred, prob_true, marker='o')
 plt.plot([0, 1], [0, 1], linestyle='--')  # Diagonal line
 plt.xlabel('Mean Predicted Probability')
 plt.ylabel('Fraction of Positives')
-plt.title('Reliability Curve of Fine-Tuned RoBERTa V3 Base')
+plt.title('Reliability Curve of Fine-Tuned DeBERTa V3 Base')
 plt.show()

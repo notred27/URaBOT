@@ -1,6 +1,3 @@
-# Script to train a model specified in `MODEL_NAME` with the new dataset and all 4 features (Separated by [SEQ] tokens).
-
-
 from datasets import load_dataset
 from datasets import Dataset as DS
 import evaluate
@@ -11,8 +8,10 @@ from transformers import AutoModelForSequenceClassification, AutoConfig, AutoTok
 from sklearn.model_selection import train_test_split
 
 
-MODEL_NAME = "microsoft/deberta-v3-base"
-
+MODEL_NAME = "distilbert/distilbert-base-uncased"
+LEARN_RATE = 1e-6
+BATCH_SIZE = 64
+EPOCHS = 10
 
 
 # Load pre-trained models and tokenizers
@@ -65,8 +64,7 @@ test_dataset = dataset_split['test']
 
 print(train_dataset[0])
 print(test_dataset[0])
-
-
+print("Length of test dataset:", len(test_dataset))
 
 
 # Set hardware target
@@ -86,18 +84,16 @@ def compute_metrics(eval_pred):
     return {**acc, **f1}
 
 
-
 # Set up the training arguments
-training_args = TrainingArguments(output_dir=MODEL_NAME + "_3f",
-                                  per_device_eval_batch_size=32,
-                                  per_device_train_batch_size=32,
-                                  num_train_epochs=10,
+training_args = TrainingArguments(output_dir=MODEL_NAME + "_new",
+                                  per_device_eval_batch_size=BATCH_SIZE,
+                                  per_device_train_batch_size=BATCH_SIZE,
+                                  num_train_epochs=EPOCHS,
                                   eval_strategy="epoch",
-                                  learning_rate=2e-5,  # Specify the learning rate here
+                                  learning_rate=LEARN_RATE,  # Specify the learning rate here
                                   weight_decay=0.01,   # Regularization
                                   warmup_steps=500,    # Optional: Warmup steps for the learning rate scheduler
                                   )
-
 
 
 trainer = Trainer(
@@ -114,5 +110,3 @@ trainer.train()
 # Save the fine-tuned model and tokenizer
 trainer.save_model(MODEL_NAME + "_4f")  # Specify your desired path
 tokenizer.save_pretrained(MODEL_NAME + "_4f")  # Save the tokenizer
-
-
