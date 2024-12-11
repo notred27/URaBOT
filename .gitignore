@@ -1,3 +1,5 @@
 wandb/
 Models/trained_models/
 test_trainer/
+
+Extension/config.js

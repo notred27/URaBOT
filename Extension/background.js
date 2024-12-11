@@ -1,6 +1,9 @@
 // Base url for Twitter
 const twitterURL = 'https://x.com/';
 
+const API_ENDPOINT = 'http://127.0.0.1:5000/verify';
+
+console.log(API_ENDPOINT);  // Output: https://api.example.com/v1
 
 // Set the badge text to OFF when the extension is initially loaded
 // Additionally set local variables when initially loaded
@@ -13,6 +16,8 @@ chrome.runtime.onInstalled.addListener(async () => {
     chrome.storage.local.set({'hide_bot_content': false})
     chrome.storage.local.set({'bot_threshold': 0.75})
     chrome.storage.local.set({process_tweets: {"test":0}});
+    chrome.storage.local.set({'endpoint': API_ENDPOINT})
+
 
     
 });
@@ -182,6 +187,8 @@ async function getEstimates() {
     const allPromises = [];  // List of promises that will be processed
     const foundTweets = []; // Local tweets from this batch
     let tweet_dict = await chrome.storage.local.get(['process_tweets']);    // All tweets that have been found so far
+    let api_url = await chrome.storage.local.get(['endpoint']);    // All tweets that have been found so far
+
 
     // Search through all currently rendered tweets
     document.querySelectorAll('[data-testid="tweet"]').forEach(async tweet => {
@@ -234,7 +241,7 @@ async function getEstimates() {
 
 
                 // Create fetch requests to the API endpoint
-                const fetchPromise = fetch("http://127.0.0.1:5000/verify", {
+                const fetchPromise = fetch(api_url.endpoint, {
                     method: "POST",
                     body: tweetForm,
             
