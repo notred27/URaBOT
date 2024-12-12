@@ -48,7 +48,7 @@ HTML in the browser
 ## How to Run
 
 ### Loading the Application:
-The base Chrome extension can be enabled by **loading the unpacked extension** that is found in the [Extension](Extension) directory at <nobr>[chrome://extensions/](chrome://extensions/)</nobr>. Ensure that `Developer mode` has been enabled.
+The base Chrome extension can be enabled by **loading the unpacked extension** that is found in the [Extension](Extension) directory at [<nobr>chrome://extensions/</nobr>](chrome://extensions/). Ensure that `Developer mode` has been enabled.
 
 For more help, check out additional information [here.](https://knowledge.workspace.google.com/kb/load-unpacked-extensions-000005962)
 
