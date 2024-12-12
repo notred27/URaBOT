@@ -117,10 +117,20 @@ plt.ylabel('Fraction of Positives')
 plt.title('Reliability Curve of Fine-Tuned DeBERTa V3 Base')
 plt.show()
 
-prob_true, prob_pred = calibration_curve(column_arrays[1], scaled, n_bins=10, pos_label=(1))
-plt.plot(prob_pred, prob_true, marker='o')
+prob_true_ps, prob_pred_ps = calibration_curve(column_arrays[1], scaled, n_bins=10, pos_label=(1))
+plt.plot(prob_pred_ps, prob_true_ps, marker='o')
 plt.plot([0, 1], [0, 1], linestyle='--')  # Diagonal line
 plt.xlabel('Mean Predicted Probability')
 plt.ylabel('Fraction of Positives')
+plt.title('Reliability Curve of Fine-Tuned DeBERTa V3 Base')
+plt.show()
+
+
+plt.plot(prob_pred, prob_true, marker='.', label="Default Calibration Curve")
+plt.plot(prob_pred_ps, prob_true_ps, marker='.', color='r', label="Platt Scaled Calibration Curve")
+plt.plot([0, 1], [0, 1], linestyle='--')  # Diagonal line
+plt.xlabel('Mean Predicted Probability')
+plt.ylabel('Fraction of Positives')
+plt.legend(loc="lower right")
 plt.title('Reliability Curve of Fine-Tuned DeBERTa V3 Base')
 plt.show()

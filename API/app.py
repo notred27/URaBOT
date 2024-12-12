@@ -2,7 +2,6 @@
 from flask import Flask, request, make_response
 from flask import jsonify
 from flask_cors import CORS, cross_origin   # Import CORS module
-from rich import print
 
 # Model imports
 from transformers import AutoModelForSequenceClassification, AutoConfig, AutoTokenizer
@@ -18,6 +17,8 @@ model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_label
 config = AutoConfig.from_pretrained(MODEL_NAME)
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
+A = 7.67393
+B = -3.74401
 
 # Set hardware target for model
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -100,8 +101,15 @@ def verify():
     with torch.no_grad():
         outputs = model(**tokenized_input)
     
+
+
+
     # Determine classification
     sigmoid = (1 / (1 + np.exp(-outputs.logits.detach().numpy()))).tolist()
+
+    # Apply Platt Scaling
+    # sigmoid = (1/(1+ np.exp(-(A * sigmoid + B))))
+
     label = np.argmax(outputs.logits.detach().numpy(), axis=-1).item()
 
 
@@ -114,4 +122,4 @@ def verify():
 
 # Start the server
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host ="0.0.0.0", port=5000)
