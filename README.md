@@ -1,4 +1,4 @@
-# URaBot: A real-time bot detector for Twitter (a.k.a. X)
+# URaBot: A Real-Time Bot Detector for Twitter (a.k.a. X)
 
 ## Introduction
 
@@ -70,6 +70,6 @@ Additionally, you can adjust the environmental variables found in the [.env](API
 
 **Future Tasks**
 - [ ] Extend functionality to other social media sites (Instagram, BlueSky, Facebook, etc.)
-
+- [ ] Create an adjusted version of the extension to run on Mozilla (Firefox)
 
 
