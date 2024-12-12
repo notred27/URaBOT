@@ -61,15 +61,15 @@ Additionally, you can adjust the environmental variables found in the [.env](API
 - [x] Gather and pre-process data
 - [x] Build base models
 - [x] Test metrics on models and fine-tune (confidence intervals)
-- [x] Perform Platt-Scaling to calibrate model
+- [x] Perform Platt-Scaling to calibrate our models 
 - [x] Deploy models in API endpoint
-
 - [x] Build extension base
 - [x] Build RESTful API endpoint
-- [ ] Host API endpoint
+
 
 **Future Tasks**
 - [ ] Extend functionality to other social media sites (Instagram, BlueSky, Facebook, etc.)
+- [ ] Permanently host API endpoint
 - [ ] Create an adjusted version of the extension to run on Mozilla (Firefox)
 
 
