@@ -55,7 +55,7 @@ For more help, check out additional information [here.](https://knowledge.worksp
 ### Locally Hosting the API:
 
 
-To host the API locally, navigate into the `API` folder run the following Python script:
+To host the API locally, navigate into the [API](API) directory and run the following Python script:
 ```bash
     python -m flask run
 ```
