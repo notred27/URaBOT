@@ -33,7 +33,7 @@ HTML in the browser
 **Main Tasks**
 - [x] Gather and pre-process data
 - [x] Build base models
-- [ ] Test metrics on models and fine-tune (confidence intervals)
+- [x] Test metrics on models and fine-tune (confidence intervals)
 - [x] Perform Platt-Scaling to calibrate model
 - [x] Deploy models in API endpoint
 
