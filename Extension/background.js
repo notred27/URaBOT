@@ -175,11 +175,6 @@ async function extensionIsActive() {
 
 
 
-
-
-
-
-
 //===========// Functions for HTML injection //===========//
 
 // Search for currently loaded tweets in the browser, and make a request to the API for classification
@@ -228,7 +223,6 @@ async function getEstimates() {
                 }
 
 
-
                 // TODO: Make this batched to reduce # of connections to the API?
                 // Construct API payload
                 const tweetForm = new FormData();
@@ -260,18 +254,27 @@ async function getEstimates() {
                         });
 
                         foundTweets.push({tweetId:psudoId, score: json.percent})
-                    });
+                    })
+                    .catch((err) => {
+                        if (!err instanceof TypeError) {
+                            // This is the response for querying a proceessed tweet / in process tweet
+
+                            console.error("Exception occurred:", err)
+                        }
+                        
+                    })
 
                 allPromises.push(fetchPromise);
 
             } catch (error) {   //TODO: Create a better handler for this
-                console.error(error)
+                console.error("AA", error)
             }
 
-        }})
+        }
+    });
 
-        // Wait for all promises to resolve, then send the data to local storage
-        Promise.all(allPromises)
+    // Wait for all promises to resolve, then send the data to local storage
+    Promise.all(allPromises)
 }
 
 
