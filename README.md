@@ -48,7 +48,7 @@ HTML in the browser
 ## How to Run
 
 ### Loading the Application:
-The base Chrome extension can be enabled by **loading an unpacked extension** at [chrome://extensions/](chrome://extensions/). Ensure that `Developer mode` has been enabled.
+The base Chrome extension can be enabled by **loading the unpacked extension** that is found in the [Extension](Extension) directory at [chrome://extensions/](chrome://extensions/). Ensure that `Developer mode` has been enabled.
 
 For more help, check out additional information [here.](https://knowledge.workspace.google.com/kb/load-unpacked-extensions-000005962)
 
@@ -61,3 +61,5 @@ To host the API locally, navigate into the `API` folder run the following Python
 ```
 
 - Ensure that the requirements from `requirements.txt` are met
+
+Additionally, you can adjust the environmental variables found in the [.env](API/.env) to run a specific version of our model, or enable Platt Scaling.
