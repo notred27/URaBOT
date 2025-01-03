@@ -1,6 +1,14 @@
+
+<img src="Extension/icons/icon128.png" />
+
+
 # URaBot
 
+
+
 **A Chrome extension that provides real-time bot detection for Twitter (a.k.a. X).**
+
+
 
 ## Introduction
 
