@@ -1,4 +1,14 @@
-# URaBot: A Real-Time Bot Detector for Twitter (a.k.a. X)
+
+<img src="Extension/icons/icon128.png" />
+
+
+# URaBot
+
+
+
+**A Chrome extension that provides real-time bot detection for Twitter (a.k.a. X).**
+
+
 
 ## Introduction
 
@@ -11,26 +21,38 @@ sites like Twitter (a.k.a. X) that employ built-in bot detectors often still let
 of artificially generated content. Through our work, we introduce URaBot: an application that operates in real-time
 to detect bot-generated content on the browser version of Twitter. Our application consists of fine-tuned deep learning 
 classifiers (MLP, DeBERTa, distilBERT), and a Chromium extension that can access our model and make corresponding changes to 
-HTML in the browser
+HTML in the browser.
 
-## How to Run
+
+## Features
+
+
+## Installing the Application
 
 ### Loading the Application:
-The base Chrome extension can be enabled by **loading the unpacked extension** that is found in the [Extension](Extension) directory at [<nobr>chrome://extensions/</nobr>](chrome://extensions/). Ensure that `Developer mode` has been enabled.
+The base Chrome extension can be enabled by downloading the [Extension](Extension) directory and loading it as an **unpacked extension** at [<nobr>chrome://extensions/</nobr>](chrome://extensions/). Ensure that `Developer mode` has been enabled on this page. URaBOT should then appear as an installed extension on this page.
 
-For more help, check out additional information about loading a custom extension [here.](https://knowledge.workspace.google.com/kb/load-unpacked-extensions-000005962)
+> For more help, check out additional information about loading a custom extension [here.](https://knowledge.workspace.google.com/kb/load-unpacked-extensions-000005962)
+
 
 ### Locally Hosting the API:
 
+After the Chrome extension has been installed, you must locally host the API on your own machine. This is done with a python Flask server.
 
-To host the API locally, navigate into the [API](API) directory and run the following Python script:
+First, ensure that all of the requirements from `requirements.txt` are met. This can be done with pip and the following command:
+```bash
+    pip install -r /path/to/requirements.txt
+```
+
+Then, navigate into the [API](API) directory and run the following Python script:
 ```bash
     python -m flask run
 ```
 
-- Ensure that the requirements from `requirements.txt` are met
 
-Additionally, you can adjust the environmental variables found in the [.env](API/.env) to run a specific version of our model or enable Platt Scaling. The Hugging Face labels for our models are:
+After this script, the server should be running, and you can enable the extension through its pop-up menu by clicking the extension badge.
+
+You can additionally adjust the environmental variables found in the [.env](API/.env) to run a specific version of our model, or enable Platt Scaling. The Hugging Face labels for our models are:
 
 - URaBOT2024/debertaV3_FullFeature
 
@@ -38,9 +60,13 @@ Additionally, you can adjust the environmental variables found in the [.env](API
 
 - URaBOT2024/distilledbert_FullFeature
 
+## Limitations
 
 
-## Dataset and Models
+
+# Additional Training Information
+
+The remaining information is not crucial for running the application, but instead documents how our models were trained and calibrated.
 
 ### Dataset:
 
@@ -71,5 +97,7 @@ Additionally, you can adjust the environmental variables found in the [.env](API
 - [ ] Extend functionality to other social media sites (Instagram, BlueSky, Facebook, etc.)
 - [ ] Permanently host API endpoint
 - [ ] Create an adjusted version of the extension to run on Mozilla (Firefox)
+- [ ] Create an option for users to report AI-generated content to create future datasets
+- [ ] Extend models for AI-image classification
 
 
