@@ -2,7 +2,7 @@
 import math
 
 # Evaluation accuracy of the model
-test_acc = 0.76171
+test_acc = 0.7619
 
 # Set alpha and look up z
 confidence_interval = 0.95

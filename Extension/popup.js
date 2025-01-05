@@ -12,11 +12,8 @@ chrome.storage.local.get(['hide_bot_content'], (result) => {
 
 // Set slider hide bot content value when loading the popup HTML
 chrome.storage.local.get(['bot_threshold'], (result) => {
-    console.log("here", result.bot_threshold)
     document.getElementById('threshold_slider').value = result.bot_threshold * 100;
     document.getElementById('slider_val').innerHTML = document.getElementById('threshold_slider').value + "%";
-
-
 });
 
   
@@ -58,29 +55,27 @@ document.getElementById('threshold_slider').addEventListener('change', () => {
     // Update text 
     document.getElementById('slider_val').innerHTML = document.getElementById('threshold_slider').value + "%";
 
-    // Send message to service workers and background.js
-    chrome.runtime.sendMessage({ message: 'set_bot_threshold', val: document.getElementById('threshold_slider').value });
+    // Set threshold value in storage for service workers to access
+    chrome.storage.local.set({ bot_threshold: document.getElementById('threshold_slider').value / 100 })
 });
 
 
 
-// document.getElementById('post_test').addEventListener('click', () => {
-//     // Test out connection to flask backend
-//     const formData = new FormData();
-//     // formData.append('message', "This is the test!");
-//     formData.append('username', "This is the test!");
-//     formData.append('display_name', "This is the test!");
-//     formData.append('tweet_content', "This is the test!");
+document.getElementById('post_test').addEventListener('click', () => {
+    // Test out connection to flask backend
 
-//     fetch("http://127.0.0.1:5000/verify", {
-//         method: "POST",
-//         body: formData,
 
-//     })
-//     .then((response) => {
-//         if(response["status"] == 200){  // Only continue if status is ok
-//             return response.json();
-//         }
-//     })
-//     .then((json) => console.log(json));
-// });
+    
+    fetch("http://127.0.0.1:5000/ping", {
+        method: "GET",
+    })
+    .then((response) => {
+        if(response["status"] == 200){  // Only continue if status is ok
+            document.getElementById('verify_text_test').textContent = "API is running."
+        } else {
+            document.getElementById('verify_text_test').textContent = "Error with API endpoint..."
+
+        }
+    })
+    .catch(document.getElementById('verify_text_test').textContent = "API not found...")
+});
