@@ -10,6 +10,12 @@ chrome.storage.local.get(['hide_bot_content'], (result) => {
     document.getElementById('hide_bot_content').checked = result.hide_bot_content;
 });
 
+
+chrome.storage.local.get(['api_endpoint'], (result) => {
+    document.getElementById(result.api_endpoint).checked = true;
+});
+
+
 // Set slider hide bot content value when loading the popup HTML
 chrome.storage.local.get(['bot_threshold'], (result) => {
     document.getElementById('threshold_slider').value = result.bot_threshold * 100;
@@ -62,85 +68,95 @@ document.getElementById('threshold_slider').addEventListener('change', () => {
 
 
 
-// // Add event listener for each radio button
-// document.querySelectorAll('input[name="api_endpoint"]').forEach(radio => {
-//   radio.addEventListener('change', (event) => {
-//     // Get the selected radio button value
-//     const selectedValue = event.target.value;
-//     console.log('Selected value:', selectedValue);
-//     chrome.storage.local.set({ api_endpoint: selectedValue })
+// Add event listener for each radio button
+document.querySelectorAll('input[name="api_endpoint"]').forEach(radio => {
+    radio.addEventListener('change', (event) => {
+        // Get the selected radio button value
+        const selectedValue = event.target.value;
+        console.log('Selected value:', selectedValue);
+        chrome.storage.local.set({ api_endpoint: selectedValue })
 
-//     // You can perform other actions here based on the selected radio button
-//   });
-// });
+        // You can perform other actions here based on the selected radio button
+    });
+});
 
 
 
 // Add function to debug button for testing API 
-document.getElementById('post_test').addEventListener('click', () => {
-    // // Test connection to flask backend 
-    // fetch("http://127.0.0.1:5000/ping", {
-    //     method: "GET",
-    // })
-    // .then((response) => {
-    //     if(response["status"] == 200){  // Only continue if status is ok
-    //         document.getElementById('verify_text_test').textContent = "API is running."
-    //     } else {
-    //         document.getElementById('verify_text_test').textContent = "Error with API endpoint..."
-    //     }
-    // })
-    // .catch(document.getElementById('verify_text_test').textContent = "API not found...")
+document.getElementById('post_test').addEventListener('click', async () => {
 
 
 
-    fetch('https://mreidy3-urabot.hf.space/gradio_api/call/predict', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ "data": ["dispname", "This is a tweet", "true", "213"] })
-    })
-        .then(data => {
-            if (data.status == 200) {
-                return data.json()
-            }
 
+    const endpoint = await chrome.storage.local.get(['api_endpoint'])
+
+    if (endpoint.api_endpoint === "localhost") {
+        // Test connection to flask backend 
+        fetch("http://127.0.0.1:5000/ping", {
+            method: "GET",
         })
-        .then(res => {
-            // console.log(res.event_id)
-            fetch(`https://mreidy3-urabot.hf.space/gradio_api/call/predict/${res.event_id}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
+            .then((response) => {
+                if (response["status"] == 200) {  // Only continue if status is ok
+                    document.getElementById('verify_text_test').textContent = "Local API is running."
+                } else {
+                    document.getElementById('verify_text_test').textContent = "Error with local API endpoint..."
                 }
             })
-                .then(data1 => {
-                    if (data1.status == 200) {
-                        return data1.text()
+            .catch(document.getElementById('verify_text_test').textContent = "Local API not found...")
+
+    } else if (endpoint.api_endpoint === "hf_spaces") {
+
+        fetch('https://mreidy3-urabot.hf.space/gradio_api/call/predict', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ "data": ["12312", "username", "dispname", "This is a tweet", "true", "213"] })
+        })
+            .then(data => {
+                if (data.status == 200) {
+                    return data.json()
+                }
+
+            })
+            .then(res => {
+                // console.log(res.event_id)
+                fetch(`https://mreidy3-urabot.hf.space/gradio_api/call/predict/${res.event_id}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
                     }
                 })
-                .then(text => {
-                    // console.log(text)
+                    .then(data1 => {
+                        if (data1.status == 200) {
+                            return data1.text()
+                        }
+                    })
+                    .then(text => {
+                        // console.log(text)
 
-                    const regex = /data:\s*(\[[^\]]+\])/;  // Matches the 'data' part
-                    const match = text.match(regex);
+                        const regex = /data:\s*(\[[^\]]+\])/;  // Matches the 'data' part
+                        const match = text.match(regex);
 
-                    // Step 2: If match is found, parse the string as JSON to get the array
-                    if (match) {
-                        const dataArray = JSON.parse(match[1]);  // Parse the array from the string
+                        // Step 2: If match is found, parse the string as JSON to get the array
+                        if (match) {
+                            const dataArray = JSON.parse(match[1]);  // Parse the array from the string
 
-                        // Step 3: Extract the numeric value from the array
-                        const numericValue = parseFloat(dataArray[0]);  // Convert the string to a number
+                            // Step 3: Extract the numeric value from the array
+                            const numericValue = parseFloat(dataArray[0]);  // Convert the string to a number
 
-                        console.log(numericValue);  // Output: 0.5390523672103882
-                        document.getElementById('verify_text_test').textContent = "API connected to HF Spaces"
-                    }
-                })
-        }
-        )
-        .catch((error) => {
-            console.error('Error:', error);
-        });
+                            console.log(numericValue);  // Output: 0.5390523672103882
+                            document.getElementById('verify_text_test').textContent = "API connected to HF Spaces"
+                        }
+                    })
+            }
+            )
+            .catch((error) => {
+                document.getElementById('verify_text_test').textContent = "Error connecting to HF Spaces"
+                console.error('Error:', error);
+            });
+
+    }
 
 
 });

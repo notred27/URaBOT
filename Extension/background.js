@@ -15,6 +15,8 @@ chrome.runtime.onInstalled.addListener(async () => {
     chrome.storage.local.set({ 'bot_threshold': 0.75 })
     chrome.storage.local.set({ process_tweets: { "test": 0 } });
     chrome.storage.local.set({ 'endpoint': API_ENDPOINT })
+    chrome.storage.local.set({ 'api_endpoint': "localhost" })
+
 });
 
 
@@ -39,10 +41,22 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     if (request.message === 'user_scrolled' && sender.tab.url.startsWith(twitterURL)) {
         if (extensionIsActive()) {
             // Execute the HTML injection function in real-time as new tweets are loaded
-            await chrome.scripting.executeScript({
-                target: { tabId: sender.tab.id },
-                func: getEstimates,
-            })
+
+            const endpoint = await chrome.storage.local.get(['api_endpoint'])
+
+            if (endpoint.api_endpoint === "localhost") {
+                await chrome.scripting.executeScript({
+                    target: { tabId: sender.tab.id },
+                    func: getEstimates,
+                })
+
+            } else if (endpoint.api_endpoint === "hf_spaces") {
+                console.log("hf_spaces")
+                await chrome.scripting.executeScript({
+                    target: { tabId: sender.tab.id },
+                    func: getEstimatesGradio,
+                })
+            }
         }
     }
 });
@@ -62,7 +76,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             const activeTab = tabs[0];
 
             // Check for valid context 
-            if (activeTab.url.startsWith(twitterURL)) {                
+            if (activeTab.url.startsWith(twitterURL)) {
                 // Execute the HTML injection function for hiding bot content
                 await chrome.scripting.executeScript({
                     target: { tabId: activeTab.id },
@@ -450,4 +464,142 @@ function revertTweetRemoval() {
         // Set tweets hight to its previous value
         tweet.style.height = ""
     });
+}
+
+
+
+
+
+
+
+
+// Search for currently loaded tweets in the browser, and make a request to the API for classification
+async function getEstimatesGradio() {
+    const allPromises = [];  // List of promises that will be processed
+    const foundTweets = []; // Local tweets from this batch
+    let tweet_dict = await chrome.storage.local.get(['process_tweets']);    // All tweets that have been found so far
+
+
+    // Search through all currently rendered tweets
+    document.querySelectorAll('[data-testid="tweet"]').forEach(async tweet => {
+        const psudoId = tweet.getAttribute("aria-labelledby").split(" ")[0];
+
+        if (!(psudoId in tweet_dict.process_tweets)) { // Don't rerender processed tweets 
+
+            try { // Scrape tweet data
+                const handle = tweet.querySelector('[data-testid="User-Name"]').textContent.split("@");
+                const name = handle[0]
+                const username = handle[1].split("·")[0]
+
+                tweet_dict.process_tweets[psudoId] = -1 // Set val to -1 to signal that this tweet has been found
+                await chrome.storage.local.set({ process_tweets: tweet_dict.process_tweets })
+
+                let isVerified = false;
+                if (tweet.querySelector('[aria-label="Verified account"]') != null) {
+                    isVerified = true
+                }
+
+                var tweetText = ""
+                if (tweet.querySelector('[data-testid="tweetText"') != null) {
+                    tweetText = tweet.querySelector('[data-testid="tweetText"').textContent
+                }
+
+                // Format likes to integers
+                var likes = ""
+                if (tweet.querySelector('[data-testid="like"') != null) {
+                    likes = tweet.querySelector('[data-testid="like"').textContent
+
+                    if (likes.charAt(likes.length - 1) == 'K') {
+                        likes = parseFloat(likes.substring(0, likes.length - 1)) * 1000
+
+                    } else if (likes.charAt(likes.length - 1) == 'M') {
+                        likes = parseFloat(likes.substring(0, likes.length - 1)) * 1000000
+                    }
+                }
+
+
+                // TODO: Make this batched to reduce # of connections to the API?
+                // Construct API payload
+                const tweetForm = new FormData();
+                tweetForm.append('psudo_id', psudoId);
+                tweetForm.append('username', username);
+                tweetForm.append('display_name', name);
+                tweetForm.append('tweet_content', tweetText);
+                tweetForm.append('is_verified', isVerified);
+                tweetForm.append('likes', likes);
+
+
+                // Create fetch requests to the API endpoint
+                const fetchPromise = fetch('https://mreidy3-urabot.hf.space/gradio_api/call/predict', {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ "data": [name, tweetText, isVerified, likes] })
+                })
+                    .then((response) => {
+                        if (response["status"] == 200) {  // Only continue if status is ok
+                            return response.json();
+                        }
+                    })
+                    .then((json) => {
+                        // console.log(res.event_id)
+                        fetch(`https://mreidy3-urabot.hf.space/gradio_api/call/predict/${json.event_id}`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            }
+                        })
+                            .then(data1 => {
+                                if (data1.status == 200) {
+                                    return data1.text()
+                                }
+                            })
+                            .then(text => {
+                                // console.log(text)
+
+                                const regex = /data:\s*(\[[^\]]+\])/;  // Matches the 'data' part
+                                const match = text.match(regex);
+
+                                // Step 2: If match is found, parse the string as JSON to get the array
+                                if (match) {
+                                    const dataArray = JSON.parse(match[1]);  // Parse the array from the string
+
+                                    // Step 3: Extract the numeric value from the array
+                                    const numericValue = parseFloat(dataArray[0]);  // Convert the string to a number
+                                    console.log(psudoId, numericValue)
+
+                                    // Add each tweet to the array with its prediction
+                                    tweet_dict.process_tweets[psudoId] = numericValue
+
+                                    chrome.storage.local.set({ process_tweets: tweet_dict.process_tweets }).then(() => {
+                                        chrome.runtime.sendMessage({ message: 'update_tweets' });
+                                    });
+
+                                    foundTweets.push({ tweetId: psudoId, score: json.percent })
+
+
+                                }
+                            })
+                    })
+                    .catch((err) => {
+                        if (!err instanceof TypeError) {
+                            // This is the response for querying a proceessed tweet / in process tweet
+
+                            console.error("Exception occurred:", err)
+                        }
+
+                    })
+
+                allPromises.push(fetchPromise);
+
+            } catch (error) {   //TODO: Create a better handler for this
+                console.error("Error classifying tweet batch", error)
+            }
+
+        }
+    });
+
+    // Wait for all promises to resolve, then send the data to local storage
+    Promise.all(allPromises)
 }

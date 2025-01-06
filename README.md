@@ -87,7 +87,7 @@ The remaining information is not crucial for running the application, but instea
 - [x] ~~Gather and pre-process data~~
 - [x] ~~Build base models~~
 - [x] ~~Test metrics on models and fine-tune (confidence intervals)~~
-- [x] ~~Perform Platt-Scaling to calibrate our models ~~
+- [x] ~~Perform Platt-Scaling to calibrate our models~~
 - [x] ~~Deploy models in API endpoint~~
 - [x] ~~Build extension base~~
 - [x] ~~Build RESTful API endpoint~~
@@ -98,7 +98,7 @@ The remaining information is not crucial for running the application, but instea
 - [ ] Permanently host API endpoint
 
 > Slow API hosted at https://huggingface.co/spaces/mreidy3/URaBot
-
+- [ ] Prevent duplicate tweets from being processed on this endpoint (and only allow 200 psudo id's to be stored on the endpoint)
 
 - [ ] Create an adjusted version of the extension to run on Mozilla (Firefox)
 - [ ] Create an option for users to report AI-generated content to create future datasets
