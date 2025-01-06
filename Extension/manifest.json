@@ -25,7 +25,8 @@
         "tabs"
     ],
     "host_permissions": [
-        "https://x.com/*"
+        "https://x.com/*",
+        "https://mreidy3-urabot.hf.space/*"
     ],
     "content_scripts": [
         {

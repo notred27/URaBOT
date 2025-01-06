@@ -62,7 +62,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             const activeTab = tabs[0];
 
             // Check for valid context 
-            if (activeTab.url.startsWith(twitterURL)) {
+            if (activeTab.url.startsWith(twitterURL)) {                
                 // Execute the HTML injection function for hiding bot content
                 await chrome.scripting.executeScript({
                     target: { tabId: activeTab.id },

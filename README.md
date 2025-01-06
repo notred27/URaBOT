@@ -84,18 +84,22 @@ The remaining information is not crucial for running the application, but instea
 
 ## Tasks
 **Main Tasks**
-- [x] Gather and pre-process data
-- [x] Build base models
-- [x] Test metrics on models and fine-tune (confidence intervals)
-- [x] Perform Platt-Scaling to calibrate our models 
-- [x] Deploy models in API endpoint
-- [x] Build extension base
-- [x] Build RESTful API endpoint
+- [x] ~~Gather and pre-process data~~
+- [x] ~~Build base models~~
+- [x] ~~Test metrics on models and fine-tune (confidence intervals)~~
+- [x] ~~Perform Platt-Scaling to calibrate our models ~~
+- [x] ~~Deploy models in API endpoint~~
+- [x] ~~Build extension base~~
+- [x] ~~Build RESTful API endpoint~~
 
 
 **Future Tasks**
 - [ ] Extend functionality to other social media sites (Instagram, BlueSky, Facebook, etc.)
 - [ ] Permanently host API endpoint
+
+> Slow API hosted at https://huggingface.co/spaces/mreidy3/URaBot
+
+
 - [ ] Create an adjusted version of the extension to run on Mozilla (Firefox)
 - [ ] Create an option for users to report AI-generated content to create future datasets
 - [ ] Extend models for AI-image classification
