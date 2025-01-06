@@ -98,7 +98,7 @@ document.getElementById('post_test').addEventListener('click', () => {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ "data": ["12312", "username", "dispname", "This is a tweet", "true", "213"] })
+        body: JSON.stringify({ "data": ["dispname", "This is a tweet", "true", "213"] })
     })
         .then(data => {
             if (data.status == 200) {
