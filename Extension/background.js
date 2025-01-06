@@ -1,7 +1,7 @@
 // Base url for Twitter
 const twitterURL = 'https://x.com/';
 const API_ENDPOINT = 'http://127.0.0.1:5000/verify';
-
+const DEBOUNCE_DELAY_MS = 500;
 
 // Set the badge text to OFF when the extension is initially loaded
 // Additionally set local variables when initially loaded
@@ -31,34 +31,44 @@ async function toggleActive() {
 }
 
 
+// Debounce function to prevent API overload / repeat requests
+function debounce(func, wait) {
+    let timeout;
+    return function (...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), wait);
+    };
+}
 
+
+const delayedScroll = debounce(async (request, sender) => {
+    if (request.message === 'user_scrolled' && sender.tab.url.startsWith(twitterURL)) {
+        if (extensionIsActive()) {
+            const endpoint = await chrome.storage.local.get(['api_endpoint']);
+
+            if (endpoint.api_endpoint === "localhost") {
+                await chrome.scripting.executeScript({
+                    target: { tabId: sender.tab.id },
+                    func: getEstimates,
+                });
+            } else if (endpoint.api_endpoint === "hf_spaces") {
+                console.log("hf_spaces");
+                await chrome.scripting.executeScript({
+                    target: { tabId: sender.tab.id },
+                    func: getEstimatesGradio,
+                });
+            }
+        }
+    }
+}, DEBOUNCE_DELAY_MS);    
 
 /**
  * Function that receives a message from content.js, and wakes up the service worker to
  * execute the relevant classification injection function.
  */
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
-    if (request.message === 'user_scrolled' && sender.tab.url.startsWith(twitterURL)) {
-        if (extensionIsActive()) {
-            // Execute the HTML injection function in real-time as new tweets are loaded
-
-            const endpoint = await chrome.storage.local.get(['api_endpoint'])
-
-            if (endpoint.api_endpoint === "localhost") {
-                await chrome.scripting.executeScript({
-                    target: { tabId: sender.tab.id },
-                    func: getEstimates,
-                })
-
-            } else if (endpoint.api_endpoint === "hf_spaces") {
-                console.log("hf_spaces")
-                await chrome.scripting.executeScript({
-                    target: { tabId: sender.tab.id },
-                    func: getEstimatesGradio,
-                })
-            }
-        }
-    }
+    delayedScroll(request, sender)
 });
 
 
@@ -168,7 +178,7 @@ async function getEstimates() {
     const allPromises = [];  // List of promises that will be processed
     const foundTweets = []; // Local tweets from this batch
     let tweet_dict = await chrome.storage.local.get(['process_tweets']);    // All tweets that have been found so far
-    let api_url = await chrome.storage.local.get(['endpoint']);    // All tweets that have been found so far
+    let api_url = await chrome.storage.local.get(['endpoint']);    
 
 
     // Search through all currently rendered tweets
