@@ -43,7 +43,7 @@ model.eval()    # Set model to evaluation mode
 # Set up the Flask app
 app = Flask(__name__)
 # Set up CORS control (tmp for localhost)
-CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})  # Target to allow trafic from
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})  # Target to allow traffic from
 app.config['CORS_HEADERS'] = 'Content-Type'
 
 
@@ -96,14 +96,14 @@ def verify():
         return make_response(jsonify({"error": "Invalid request parameters.", "message" : "No tweet_content provided"}), 400)
         
     # Prevent multiple requests for the same tweet
-    if request.form["psudo_id"] in processed_tweets:
-        return make_response(jsonify({"error": "Conflict, tweet is already being/has been processed"}), 409)
+    # if request.form["psudo_id"] in processed_tweets:
+    #     return make_response(jsonify({"error": "Conflict, tweet is already being/has been processed"}), 409)
 
 
     #========== Resolve Multiple Requests ==========#
-
+    print(request.form)
     # Add tweet to internal (backend) process list
-    processed_tweets.append(request.form["psudo_id"])
+    # processed_tweets.append(request.form["psudo_id"])
 
 
     #========== Return Classification ==========#

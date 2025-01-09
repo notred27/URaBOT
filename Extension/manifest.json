@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "URaBOT",
-    "version": "1.0.2",
+    "version": "1.1.2",
     "author": "notred27",
     "description": "An extension for detecting and hiding bot content on Twitter.",
     "icons": {
@@ -22,15 +22,17 @@
         "activeTab",
         "storage",
         "scripting",
-        "tabs"
+        "tabs",
+        "webNavigation"
     ],
     "host_permissions": [
         "https://x.com/*",
-        "https://mreidy3-urabot.hf.space/*"
+        "https://mreidy3-urabot.hf.space/*",
+        "https://bsky.app/*"
     ],
     "content_scripts": [
         {
-            "matches": ["https://x.com/*"],
+            "matches": ["https://x.com/*", "https://bsky.app/*"],
             "js": ["content.js"],
             "css": ["rabotStyles.css"]
         }

@@ -1,5 +1,10 @@
+importScripts("service_workers/bluesky_service_worker.js");
+importScripts("service_workers/twitter_service_worker.js");
+
+
+
 // Base url for Twitter
-const twitterURL = 'https://x.com/';
+// const twitterURL = 'https://x.com/';
 const API_ENDPOINT = 'http://127.0.0.1:5000/verify';
 const DEBOUNCE_DELAY_MS = 500;
 
@@ -20,7 +25,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 
-// Function that changes both the badge text and injected css depending on if the extension is active
+// Function that changes both the badge text depending on if the extension is active
 async function toggleActive() {
     const isActive = await extensionIsActive();
     const nextState = isActive ? 'ON' : 'OFF';
@@ -61,7 +66,7 @@ const delayedScroll = debounce(async (request, sender) => {
             }
         }
     }
-}, DEBOUNCE_DELAY_MS);    
+}, DEBOUNCE_DELAY_MS);
 
 /**
  * Function that receives a message from content.js, and wakes up the service worker to
@@ -110,12 +115,21 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     if (request.message === 'activate_estimate') {
         chrome.storage.local.set({ 'activate_estimate': request.checked }).then(() => {
 
-            if (request.checked && request.tab.url.startsWith(twitterURL)) {
-                // Automatically injected estimates without need for scrolling
-                chrome.scripting.executeScript({
-                    target: { tabId: request.tab.id },
-                    func: getEstimates,
-                });
+            if (request.checked) {
+
+                if (request.tab.url.startsWith(twitterURL)) {
+                    // Automatically injected estimates without need for scrolling
+                    chrome.scripting.executeScript({
+                        target: { tabId: request.tab.id },
+                        func: getTwitterEstimates,
+                    });
+                } else if (request.tab.url.startsWith(bskyURL)) {
+                    chrome.scripting.executeScript({
+                        target: { tabId: request.tab.id },
+                        func: getBskyEstimates,
+                    });
+
+                }
 
             } else {
                 // Clean-up function for the injected estimates
@@ -178,7 +192,7 @@ async function getEstimates() {
     const allPromises = [];  // List of promises that will be processed
     const foundTweets = []; // Local tweets from this batch
     let tweet_dict = await chrome.storage.local.get(['process_tweets']);    // All tweets that have been found so far
-    let api_url = await chrome.storage.local.get(['endpoint']);    
+    let api_url = await chrome.storage.local.get(['endpoint']);
 
 
     // Search through all currently rendered tweets
