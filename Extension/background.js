@@ -48,22 +48,41 @@ function debounce(func, wait) {
 
 
 const delayedScroll = debounce(async (request, sender) => {
-    if (request.message === 'user_scrolled' && sender.tab.url.startsWith(twitterURL)) {
+    if (request.message === 'user_scrolled') {
         if (extensionIsActive()) {
             const endpoint = await chrome.storage.local.get(['api_endpoint']);
 
-            if (endpoint.api_endpoint === "localhost") {
-                await chrome.scripting.executeScript({
-                    target: { tabId: sender.tab.id },
-                    func: getEstimates,
-                });
-            } else if (endpoint.api_endpoint === "hf_spaces") {
-                console.log("hf_spaces");
-                await chrome.scripting.executeScript({
-                    target: { tabId: sender.tab.id },
-                    func: getEstimatesGradio,
-                });
+            if(sender.origin === twitterURL){
+                if (endpoint.api_endpoint === "localhost") {
+                    await chrome.scripting.executeScript({
+                        target: { tabId: sender.tab.id },
+                        func: getTwitterEstimates,
+                    });
+                } else if (endpoint.api_endpoint === "hf_spaces") {
+                    console.log("hf_spaces");
+                    await chrome.scripting.executeScript({
+                        target: { tabId: sender.tab.id },
+                        func: getEstimatesGradio,
+                    });
+                }
+            } else if(sender.origin === bskyURL) {
+                if (endpoint.api_endpoint === "localhost") {
+                    await chrome.scripting.executeScript({
+                        target: { tabId: sender.tab.id },
+                        func: getBskyEstimates,
+                    });
+                } else if (endpoint.api_endpoint === "hf_spaces") {
+                    console.log("hf_spaces");
+                    // await chrome.scripting.executeScript({
+                    //     target: { tabId: sender.tab.id },
+                    //     func: getEstimatesGradio,
+                    // });
+                }
+
+
             }
+
+
         }
     }
 }, DEBOUNCE_DELAY_MS);
@@ -102,6 +121,19 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
                 await chrome.scripting.executeScript({
                     target: { tabId: activeTab.id },
                     func: addClassification,
+                });
+
+            } else if (activeTab.url.startsWith(bskyURL)) {
+                // Execute the HTML injection function for hiding bot content
+                await chrome.scripting.executeScript({
+                    target: { tabId: activeTab.id },
+                    func: hideContent,
+                });
+
+                // Execute the HTML injection function for adding tweet classifications
+                await chrome.scripting.executeScript({
+                    target: { tabId: activeTab.id },
+                    func: injectBskyClassification,
                 });
             }
         })
@@ -352,7 +384,7 @@ function cleanupClassification() {
 
 
 /**
- * Inject HTML to content from tweets that are likely from bots (if slider is set for this).
+ * Inject HTML to hide content from tweets that are likely from bots (if slider is set for this).
  */
 async function hideContent() {
     // Fetch stored tweet data in chrome's local storage

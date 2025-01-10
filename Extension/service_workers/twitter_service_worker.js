@@ -63,7 +63,6 @@ async function getTwitterEstimates() {
 
 
     const allPromises = [];  // List of promises that will be processed
-    // const foundTweets = []; // Local tweets from this batch
     let tweet_dict = await chrome.storage.local.get(['process_tweets']);    // All tweets that have been found so far
     let api_url = await chrome.storage.local.get(['endpoint']);
 
@@ -109,12 +108,10 @@ async function getTwitterEstimates() {
                         chrome.runtime.sendMessage({ message: 'update_tweets' });
                     });
 
-                    // foundTweets.push({ tweetId: psudoId, score: json.percent })
                 })
                 .catch((err) => {
                     if (!err instanceof TypeError) {
                         // This is the response for querying a processed tweet / in process tweet
-
                         console.error("Exception occurred:", err)
                     }
 
