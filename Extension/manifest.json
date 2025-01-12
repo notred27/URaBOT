@@ -22,24 +22,23 @@
         "activeTab",
         "storage",
         "scripting",
-        "tabs",
-        "webNavigation"
+        "tabs"
     ],
     "host_permissions": [
-        "https://x.com/*",
         "https://mreidy3-urabot.hf.space/*",
+        "https://x.com/*",
         "https://bsky.app/*"
     ],
     "content_scripts": [
         {
             "matches": ["https://x.com/*"],
             "js": ["content.js"],
-            "css": ["rabotStyles.css"]
+            "css": ["service_workers/injected_stylesheets/twitter_styles.css"]
         },
         {
             "matches": ["https://bsky.app/*"],
             "js": ["content.js"],
-            "css": ["bsky_styles.css"]
+            "css": ["service_workers/injected_stylesheets/bsky_styles.css"]
         }
     ]
 }
