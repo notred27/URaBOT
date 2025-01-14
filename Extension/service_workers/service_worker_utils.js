@@ -39,7 +39,7 @@ function cleanupClassification() {
 
 
 
-// Function that changes both the badge text depending on if the extension is active
+// Function that changes the badge text depending on if the extension is active
 async function toggleActive() {
     const isActive = await extensionIsActive();
     const nextState = isActive ? 'ON' : 'OFF';
