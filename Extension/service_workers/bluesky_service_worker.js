@@ -3,12 +3,31 @@ const bskyURL = "https://bsky.app"
 
 
 
-chrome.runtime.onMessage.addListener(async (request, sender) => {
-    delayedBskyEstimate(request, sender);
-});
+//===========// Functions for Extension Message Listeners //===========//
+
+/**
+ * Obtain estimates for Bluesky from appropriate API route.
+ * @param {*} request an onMesage Listener request
+ */
+async function routeBskyToAPI(request) {
+    const endpoint = await chrome.storage.local.get(['api_endpoint']);
+
+    if (endpoint.api_endpoint === "localhost") {
+        await chrome.scripting.executeScript({
+            target: { tabId: request.tab.id },
+            func: getBskyEstimates,
+        });
+    } else if (endpoint.api_endpoint === "hf_spaces") {
+        console.log("hf_spaces");
+        await chrome.scripting.executeScript({
+            target: { tabId: request.tab.id },
+            func: getBskyEstimatesGradio,
+        });
+    }
+}
 
 
-
+// Stagger queries to API endpoint to prevent multiple attempted classifications for the same item.
 const delayedBskyEstimate = debounce(async (request, sender) => {
     if (request.message === 'user_scrolled' && sender.origin === bskyURL) {
         if (extensionIsActive()) {
@@ -17,14 +36,14 @@ const delayedBskyEstimate = debounce(async (request, sender) => {
             if (endpoint.api_endpoint === "localhost") {
                 await chrome.scripting.executeScript({
                     target: { tabId: sender.tab.id },
-                    func: getBskyEstimates,             // TODO: Maybe make this on next item (i.e. ONLY get 1 item at a time and wait for that single promise to resolve?)
+                    func: getBskyEstimates,
                 });
             } else if (endpoint.api_endpoint === "hf_spaces") {
                 console.log("hf_spaces");
-                // await chrome.scripting.executeScript({
-                //     target: { tabId: sender.tab.id },
-                //     func: getEstimatesGradio,
-                // });
+                await chrome.scripting.executeScript({
+                    target: { tabId: sender.tab.id },
+                    func: getBskyEstimatesGradio,
+                });
             }
         }
     }
@@ -32,10 +51,98 @@ const delayedBskyEstimate = debounce(async (request, sender) => {
 
 
 
+/**
+ * Listen to see if the user has scrolled to wake up the service worker,
+ * and then search for new feed items that haven't been classified yet.
+ */
+chrome.runtime.onMessage.addListener(async (request, sender) => {
+    delayedBskyEstimate(request, sender);
+});
+
+
 
 
 /**
- * Search for currently loaded tweets in the browser, and make a request to the API for classification
+ * Listen to see if the add estimates toggle (1st switch from index.html) is used.
+ * Either ensures that all stored/previously found estimates are added and
+ * then searches for new ones, or removes all injected estimates from the page's HTML.
+ */
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+    if (request.message === 'activate_estimate') {
+        await chrome.storage.local.set({ 'activate_estimate': request.checked }) // Set new value of the switch
+
+        if (request.checked && request.tab.url.startsWith(bskyURL)) {
+
+            // Inject previously found estimate HTML
+            await chrome.scripting.executeScript({
+                target: { tabId: request.tab.id },
+                func: injectBskyClassification,
+            });
+
+            await routeBskyToAPI(request); // Search for new estimates
+
+        } else if (request.tab.url.startsWith(bskyURL)) {
+            // Clean-up function for the injected estimates
+            chrome.scripting.executeScript({
+                target: { tabId: request.tab.id },
+                func: cleanupClassification,
+            });
+        }
+
+        // Check if the extension should be active
+        await toggleActive();
+    }
+});
+
+
+
+/**
+ * Listen to see if the add disclaimer toggle (2nd switch from index.html) is used.
+ * Either ensures that all estimates are found and injects disclaimers, or 
+ * removes all injected disclaimers from the page's HTML.
+ */
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+    if (request.message === 'hide_bot_content') {
+
+        await chrome.storage.local.set({ 'hide_bot_content': request.checked }) // Store new value of the switch
+
+        if (request.checked && request.tab.url.startsWith(bskyURL)) {
+
+            await routeBskyToAPI(request);  // Get estimates
+
+            // Inject disclaimers into the Bluesky tab
+            await chrome.scripting.executeScript({
+                target: { tabId: request.tab.id },
+                func: injectBskyDisclaimers,
+            });
+
+        } else if (request.tab.url.startsWith(bskyURL)) {
+
+            // Remove disclaimers from the Bluesky tab
+            await chrome.scripting.executeScript({
+                target: { tabId: request.tab.id },
+                func: removeBskyDisclaimers,
+            });
+        }
+
+        // Check if the extension should be active
+        await toggleActive();
+    }
+});
+
+
+
+
+
+//===========// Functions for HTML parsing and injection //===========//
+
+
+
+/**
+ * Search for currently loaded tweets in the browser, and make a request to the API for classification.
+ * Classification is then stored on the server and in Chrome's local storage.
+ * 
+ * Uses 'localhost' API endpoint.
  */
 async function getBskyEstimates() {
     /**
@@ -96,7 +203,7 @@ async function getBskyEstimates() {
 
     // Search through all currently rendered feedItems
     document.querySelectorAll('[data-testid*="feedItem"]').forEach(async feedItem => {
-        
+
 
         const payloadValues = await constructPayload(feedItem)
 
@@ -148,9 +255,9 @@ async function getBskyEstimates() {
 
                     try {
                         feedItem.getElementsByClassName('tmpDiv')[0].remove()
-                        
+
                     } catch (error) {
-                        
+
                     }
 
                 })
@@ -160,9 +267,9 @@ async function getBskyEstimates() {
 
                     try {
                         feedItem.getElementsByClassName('tmpDiv')[0].remove()
-                        
+
                     } catch (error) {
-                        
+
                     }
                     // Ensure that classification is added here if item has already been classified?
                 })
@@ -179,7 +286,8 @@ async function getBskyEstimates() {
 
 
 /**
- * Create HTML content to represent the bot estimation classification and inject it into the site.
+ * Create HTML content to represent the bot estimation classification, and inject it into 
+ * feed items on Bluesky.
  */
 async function injectBskyClassification() {
 
@@ -401,7 +509,7 @@ async function injectBskyDisclaimers() {
 
                                 // Inject the HTML
                                 feedItem.appendChild(disclaimerDiv);
-                                
+
                             });
 
 
@@ -418,7 +526,7 @@ async function injectBskyDisclaimers() {
 
                             if (feedItem.children[0].children[1].getElementsByClassName("rabot_check")[0] != null) {
                                 feedItem.children[0].children[1].insertBefore(disclaimerDiv, feedItem.children[0].children[1].getElementsByClassName("rabot_check")[0]);
-    
+
                             } else {
                                 feedItem.children[0].children[1].appendChild(disclaimerDiv);
                             }
@@ -466,4 +574,174 @@ function removeBskyDisclaimers() {
             }
         }
     })
+}
+
+
+
+
+/**
+ * Search for currently loaded feed items in the browser, and make a request to the API for classification.
+ * Classification is then stored on the server and in Chrome's local storage.
+ * 
+ * Uses 'hf_spaces' API endpoint.
+ */
+async function getBskyEstimatesGradio() {
+
+    async function constructPayload(feedItem) {
+        try {
+
+            // Get the user's twitter handel and display name
+            const names = feedItem.querySelectorAll('[aria-label="View profile"]')
+            const displayName = names[0].textContent
+            const handel = names[1].textContent
+
+            let text = ""
+            try {
+                text = feedItem.querySelectorAll('.css-146c3p1')[3].textContent
+            } catch (error) {
+            }
+
+
+            let likes = ""
+            if (feedItem.querySelector('[data-testid="likeCount"]') != null) {
+                likes = feedItem.querySelector('[data-testid="likeCount"]').textContent
+
+                if (likes.charAt(likes.length - 1) == 'K') {
+                    likes = parseFloat(likes.substring(0, likes.length - 1)) * 1000
+
+                } else if (likes.charAt(likes.length - 1) == 'M') {
+                    likes = parseFloat(likes.substring(0, likes.length - 1)) * 1000000
+                }
+            }
+
+            return [handel, displayName, text, likes]
+
+        } catch (error) {   //TODO: Create a better handler for this
+            console.error("Error classifying tweet batch", error)
+        }
+    }
+
+
+    function makePsudoId(username, str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = (hash << 5) - hash + char;
+        }
+        // Convert to 32bit unsigned integer in base 36 and pad with "0" to ensure length is 7.
+        return username + "_" + (hash >>> 0).toString(36).padStart(7, '0');
+    }
+
+
+    const allPromises = [];  // List of promises that will be processed
+    const foundTweets = []; // Local tweets from this batch
+    let tweet_dict = await chrome.storage.local.get(['process_tweets']);    // All tweets that have been found so far
+
+
+    // Search through all currently rendered tweets
+    document.querySelectorAll('[data-testid*="feedItem"]').forEach(async feedItem => {
+        const payloadValues = await constructPayload(feedItem)
+
+        // Hash over username and feedItem content to create a semi-unique psudoId
+        const psudoId = makePsudoId(payloadValues[0], payloadValues[2]);
+
+
+        if (!(psudoId in tweet_dict.process_tweets) && feedItem.getElementsByClassName('tmpDiv').length == 0) { // Don't rerender processed tweets 
+
+            try { // Scrape tweet data
+                tweet_dict.process_tweets[psudoId] = -1 // Set val to -1 to signal that this tweet has been found
+                await chrome.storage.local.set({ process_tweets: tweet_dict.process_tweets })
+
+
+                var tmpDiv = document.createElement("div");
+                tmpDiv.innerHTML = `<img src=\"${chrome.runtime.getURL("icons/preloader.svg")}\"></img>`
+                tmpDiv.className = "tmpDiv"
+                feedItem.children[0].children[1].appendChild(tmpDiv);
+
+
+
+                // Create fetch requests to the API endpoint
+                const fetchPromise = fetch('https://mreidy3-urabot.hf.space/gradio_api/call/predict', {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ "data": [payloadValues[1], payloadValues[2], "", payloadValues[3]] })
+                })
+                    .then((response) => {
+                        if (response["status"] == 200) {  // Only continue if status is ok
+                            return response.json();
+                        }
+                    })
+                    .then((json) => {
+                        fetch(`https://mreidy3-urabot.hf.space/gradio_api/call/predict/${json.event_id}`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            }
+                        })
+                            .then(data1 => {
+                                if (data1.status == 200) {
+                                    return data1.text()
+                                }
+                            })
+                            .then(text => {
+
+                                const regex = /data:\s*(\[[^\]]+\])/;  // Matches the 'data' part
+                                const match = text.match(regex);
+
+                                // Step 2: If match is found, parse the string as JSON to get the array
+                                if (match) {
+                                    const dataArray = JSON.parse(match[1]);  // Parse the array from the string
+
+                                    // Step 3: Extract the numeric value from the array
+                                    const numericValue = parseFloat(dataArray[0]);  // Convert the string to a number
+                                    console.log(psudoId, numericValue)
+
+                                    // Add each tweet to the array with its prediction
+                                    tweet_dict.process_tweets[psudoId] = numericValue
+
+                                    foundTweets.push({ tweetId: psudoId, score: json.percent })
+
+                                    try {
+                                        feedItem.children[0].children[1].getElementsByClassName('tmpDiv')[0].remove()
+
+                                    } catch (error) {
+
+                                    }
+
+                                    chrome.storage.local.set({ process_tweets: tweet_dict.process_tweets }).then(() => {
+                                        chrome.runtime.sendMessage({ message: 'update_tweets' });
+                                    });
+
+                                }
+                            })
+                    })
+                    .catch((err) => {
+                        if (!err instanceof TypeError) {
+                            // This is the response for querying a proceessed tweet / in process tweet
+
+                            console.error("Exception occurred:", err)
+                        }
+
+                        try {
+                            feedItem.children[0].children[1].getElementsByClassName('tmpDiv')[0].remove()
+
+                        } catch (error) {
+
+                        }
+
+                    })
+
+                allPromises.push(fetchPromise);
+
+            } catch (error) {   //TODO: Create a better handler for this
+                console.error("Error classifying tweet batch", error)
+            }
+
+        }
+    });
+
+    // Wait for all promises to resolve, then send the data to local storage
+    Promise.all(allPromises)
 }

@@ -3,21 +3,34 @@ const twitterURL = "https://x.com"
 
 
 
-/**
- * Function that receives a message from content.js, and wakes up the service worker to
- * execute the relevant classification injection function.
- */
-chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
-    delayedTwitterEstimate(request, sender)
-});
+//===========// Functions for Extension Message Listeners //===========//
 
+/**
+ * Obtain estimates for Bluesky from appropriate API route.
+ * @param {*} request an onMesage Listener request
+ */
+async function routeTwitterToAPI(request) {
+    const endpoint = await chrome.storage.local.get(['api_endpoint']);
+
+    if (endpoint.api_endpoint === "localhost") {
+        await chrome.scripting.executeScript({
+            target: { tabId: request.tab.id },
+            func: getTwitterEstimates,
+        });
+    } else if (endpoint.api_endpoint === "hf_spaces") {
+        console.log("hf_spaces");
+        await chrome.scripting.executeScript({
+            target: { tabId: request.tab.id },
+            func: getTwitterEstimatesGradio,
+        });
+    }
+}
 
 
 const delayedTwitterEstimate = debounce(async (request, sender) => {
     if (request.message === 'user_scrolled' && sender.origin === twitterURL) {
         if (extensionIsActive()) {
             const endpoint = await chrome.storage.local.get(['api_endpoint']);
-
 
             if (endpoint.api_endpoint === "localhost") {
                 await chrome.scripting.executeScript({
@@ -28,7 +41,7 @@ const delayedTwitterEstimate = debounce(async (request, sender) => {
                 console.log("hf_spaces");
                 await chrome.scripting.executeScript({
                     target: { tabId: sender.tab.id },
-                    func: getEstimatesGradio,
+                    func: getTwitterEstimatesGradio,
                 });
             }
         }
@@ -36,13 +49,97 @@ const delayedTwitterEstimate = debounce(async (request, sender) => {
 }, DEBOUNCE_DELAY_MS);
 
 
+/**
+ * Function that receives a message from content.js, and wakes up the service worker to
+ * execute the relevant classification injection function.
+ */
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+    delayedTwitterEstimate(request, sender)
+});
 
+
+
+/**
+ * Listen to see if the add estimates toggle (1st switch from index.html) is used.
+ * Either ensures that all stored/previously found estimates are added and
+ * then searches for new ones, or removes all injected estimates from the page's HTML.
+ */
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+    if (request.message === 'activate_estimate') {
+        await chrome.storage.local.set({ 'activate_estimate': request.checked }) // Set new value of the switch
+
+        if (request.checked && request.tab.url.startsWith(twitterURL)) {
+
+            // Inject previously found estimate HTML
+            await chrome.scripting.executeScript({
+                target: { tabId: request.tab.id },
+                func: injectTwitterClassification,
+            });
+
+            await routeTwitterToAPI(request); // Search for new estimates
+
+        } else if (request.tab.url.startsWith(twitterURL)) {
+            // Clean-up function for the injected estimates
+            chrome.scripting.executeScript({
+                target: { tabId: request.tab.id },
+                func: cleanupClassification,
+            });
+        }
+
+        // Check if the extension should be active
+        await toggleActive();
+    }
+});
+
+
+/**
+ * Listen to see if the add disclaimer toggle (2nd switch from index.html) is used.
+ * Either ensures that all estimates are found and injects disclaimers, or 
+ * removes all injected disclaimers from the page's HTML.
+ */
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+    if (request.message === 'hide_bot_content') {
+
+        await chrome.storage.local.set({ 'hide_bot_content': request.checked }) // Store new value of the switch
+
+        if (request.checked && request.tab.url.startsWith(twitterURL)) {
+
+            await routeTwitterToAPI(request);  // Get estimates
+
+            // Inject disclaimers into the Bluesky tab
+            await chrome.scripting.executeScript({
+                target: { tabId: request.tab.id },
+                func: injectTwitterDisclaimers,
+            });
+
+        } else if (request.tab.url.startsWith(twitterURL)) {
+
+            // Remove disclaimers from the Bluesky tab
+            await chrome.scripting.executeScript({
+                target: { tabId: request.tab.id },
+                func: removeTwitterDisclaimers,
+            });
+        }
+
+        // Check if the extension should be active
+        await toggleActive();
+    }
+});
+
+
+
+
+
+//===========// Functions for HTML parsing and injection //===========//
 
 
 
 
 /**
- * Search for currently loaded tweets in the browser, and make a request to the API for classification
+ * Search for currently loaded tweets in the browser, and make a request to the API for classification.
+ * Classification is then stored on the server and in Chrome's local storage.
+ * 
+ * Uses 'localhost' API endpoint.
  */
 async function getTwitterEstimates() {
     /**
@@ -146,9 +243,9 @@ async function getTwitterEstimates() {
 
                     try {
                         tweet.getElementsByClassName('tmpDiv')[0].remove()
-                        
+
                     } catch (error) {
-                        
+
                     }
 
                 })
@@ -160,9 +257,9 @@ async function getTwitterEstimates() {
 
                     try {
                         tweet.getElementsByClassName('tmpDiv')[0].remove()
-                        
+
                     } catch (error) {
-                        
+
                     }
 
                 })
@@ -180,7 +277,8 @@ async function getTwitterEstimates() {
 
 
 /**
- * Create HTML content to represent the bot estimation classification and inject it into the site.
+ * Create HTML content to represent the bot estimation classification, and inject it into 
+ * feed items on Twitter.
  */
 async function injectTwitterClassification() {
     // Fetch stored tweet data in chrome's local storage
@@ -336,8 +434,8 @@ async function injectTwitterDisclaimers() {
                             tweet.appendChild(disclaimerDiv);
                         }
 
-                        
-                    
+
+
                     } else {    //FIXME: hack to prevent tweet from getting reclassified
                         // Add disclaimer
                         var disclaimerDiv = document.createElement("div");
@@ -382,3 +480,160 @@ function removeTwitterDisclaimers() {
         tweet.style.height = ""
     })
 }
+
+
+
+
+
+/**
+ * Search for currently loaded tweets in the browser, and make a request to the API for classification.
+ * Classification is then stored on the server and in Chrome's local storage.
+ * 
+ * Uses 'hf_spaces' API endpoint.
+ */
+async function getTwitterEstimatesGradio() {
+    const allPromises = [];  // List of promises that will be processed
+    const foundTweets = []; // Local tweets from this batch
+    let tweet_dict = await chrome.storage.local.get(['process_tweets']);    // All tweets that have been found so far
+
+
+    // Search through all currently rendered tweets
+    document.querySelectorAll('[data-testid="tweet"]').forEach(async tweet => {
+        const psudoId = tweet.getAttribute("aria-labelledby").split(" ")[0];
+
+        if (!(psudoId in tweet_dict.process_tweets) && tweet.getElementsByClassName('tmpDiv').length == 0  && tweet.getElementsByClassName('rabot_check').length == 0) { // Don't rerender processed tweets 
+
+            try { // Scrape tweet data
+                const handle = tweet.querySelector('[data-testid="User-Name"]').textContent.split("@");
+                const name = handle[0]
+                const username = handle[1].split("·")[0]
+
+                tweet_dict.process_tweets[psudoId] = -1 // Set val to -1 to signal that this tweet has been found
+                await chrome.storage.local.set({ process_tweets: tweet_dict.process_tweets })
+
+                let isVerified = false;
+                if (tweet.querySelector('[aria-label="Verified account"]') != null) {
+                    isVerified = true
+                }
+
+                var tweetText = ""
+                if (tweet.querySelector('[data-testid="tweetText"') != null) {
+                    tweetText = tweet.querySelector('[data-testid="tweetText"').textContent
+                }
+
+                // Format likes to integers
+                var likes = ""
+                if (tweet.querySelector('[data-testid="like"') != null) {
+                    likes = tweet.querySelector('[data-testid="like"').textContent
+
+                    if (likes.charAt(likes.length - 1) == 'K') {
+                        likes = parseFloat(likes.substring(0, likes.length - 1)) * 1000
+
+                    } else if (likes.charAt(likes.length - 1) == 'M') {
+                        likes = parseFloat(likes.substring(0, likes.length - 1)) * 1000000
+                    }
+                }
+
+
+                // TODO: Make this batched to reduce # of connections to the API?
+                // Construct API payload
+                const tweetForm = new FormData();
+                tweetForm.append('psudo_id', psudoId);
+                tweetForm.append('username', username);
+                tweetForm.append('display_name', name);
+                tweetForm.append('tweet_content', tweetText);
+                tweetForm.append('is_verified', isVerified);
+                tweetForm.append('likes', likes);
+
+                var tmpDiv = document.createElement("div");
+                tmpDiv.innerHTML = `<img src=\"${chrome.runtime.getURL("icons/preloader.svg")}\"></img>`
+                tmpDiv.className = "tmpDiv"
+                tweet.appendChild(tmpDiv);
+
+                // Create fetch requests to the API endpoint
+                const fetchPromise = fetch('https://mreidy3-urabot.hf.space/gradio_api/call/predict', {
+                    method: "POST",
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ "data": [name, tweetText, isVerified, likes] })
+                })
+                    .then((response) => {
+                        if (response["status"] == 200) {  // Only continue if status is ok
+                            return response.json();
+                        }
+                    })
+                    .then((json) => {
+                        fetch(`https://mreidy3-urabot.hf.space/gradio_api/call/predict/${json.event_id}`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            }
+                        })
+                            .then(data1 => {
+                                if (data1.status == 200) {
+                                    return data1.text()
+                                }
+                            })
+                            .then(text => {
+
+                                const regex = /data:\s*(\[[^\]]+\])/;  // Matches the 'data' part
+                                const match = text.match(regex);
+
+                                // Step 2: If match is found, parse the string as JSON to get the array
+                                if (match) {
+                                    const dataArray = JSON.parse(match[1]);  // Parse the array from the string
+
+                                    // Step 3: Extract the numeric value from the array
+                                    const numericValue = parseFloat(dataArray[0]);  // Convert the string to a number
+                                    console.log(psudoId, numericValue)
+
+                                    // Add each tweet to the array with its prediction
+                                    tweet_dict.process_tweets[psudoId] = numericValue
+
+                                    chrome.storage.local.set({ process_tweets: tweet_dict.process_tweets }).then(() => {
+                                        chrome.runtime.sendMessage({ message: 'update_tweets' });
+                                    });
+
+                                    foundTweets.push({ tweetId: psudoId, score: json.percent })
+
+                                    try {
+                                        tweet.getElementsByClassName('tmpDiv')[0].remove()
+
+                                    } catch (error) {
+
+                                    }
+
+                                }
+                            })
+                    })
+                    .catch((err) => {
+                        if (!err instanceof TypeError) {
+                            // This is the response for querying a proceessed tweet / in process tweet
+
+                            console.error("Exception occurred:", err)
+                        }
+
+                        try {
+                            tweet.getElementsByClassName('tmpDiv')[0].remove()
+
+                        } catch (error) {
+
+                        }
+
+                    })
+
+                allPromises.push(fetchPromise);
+
+            } catch (error) {   //TODO: Create a better handler for this
+                console.error("Error classifying tweet batch", error)
+            }
+
+        }
+    });
+
+    // Wait for all promises to resolve, then send the data to local storage
+    Promise.all(allPromises)
+}
+
+
