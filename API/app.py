@@ -66,7 +66,7 @@ def echo():
 
 
 # TODO: GC for when this list gets too large?
-processed_tweets = []
+processed_tweets = {}
 
 @app.route('/verify', methods=['POST','OPTIONS'])
 @cross_origin(origin='*',headers=['Content-Type','Authorization'])  # Account for CORS
@@ -96,13 +96,15 @@ def verify():
         return make_response(jsonify({"error": "Invalid request parameters.", "message" : "No tweet_content provided"}), 400)
         
     # Prevent multiple requests for the same tweet
-    if request.form["psudo_id"] in processed_tweets:
-        return make_response(jsonify({"error": "Conflict, tweet is already being/has been processed"}), 409)
+    if request.form["psudo_id"] in processed_tweets.keys():
+        return jsonify({"percent": processed_tweets[request.form["psudo_id"]] })
+
+        # return make_response(jsonify({"error": "Conflict, tweet is already being/has been processed"}), 409)
 
 
     #========== Resolve Multiple Requests ==========#
     # Add tweet to internal (backend) process list
-    processed_tweets.append(request.form["psudo_id"])
+    processed_tweets[request.form["psudo_id"]] = -1
 
 
     #========== Return Classification ==========#
@@ -124,10 +126,15 @@ def verify():
     label = np.argmax(outputs.logits.detach().numpy(), axis=-1).item()
 
 
+
+
     # Return sigmoid-ish value for classification. Can instead return label for strict 0/1 binary classification
     if label == 0:
+        processed_tweets[request.form["psudo_id"]] = 1 -  sigmoid[0]
         return jsonify({"percent": 1 -  sigmoid[0]})
     else:
+        processed_tweets[request.form["psudo_id"]] = sigmoid[1]
+
         return jsonify({"percent": sigmoid[1] })
 
 

@@ -11,6 +11,14 @@
         "48": "icons/icon48.png",
         "128": "icons/icon128.png"
     },
+    "web_accessible_resources": [{
+        "resources": [
+            "icons/preloader.svg"
+        ],
+        "matches": [
+            "https://bsky.app/*","https://x.com/*"
+        ]
+    }],
     "action": {
         "default_icon": "icons/icon128.png",
         "default_popup": "index.html"
@@ -31,14 +39,26 @@
     ],
     "content_scripts": [
         {
-            "matches": ["https://x.com/*"],
-            "js": ["content.js"],
-            "css": ["service_workers/injected_stylesheets/twitter_styles.css"]
+            "matches": [
+                "https://x.com/*"
+            ],
+            "js": [
+                "content.js"
+            ],
+            "css": [
+                "service_workers/injected_stylesheets/twitter_styles.css"
+            ]
         },
         {
-            "matches": ["https://bsky.app/*"],
-            "js": ["content.js"],
-            "css": ["service_workers/injected_stylesheets/bsky_styles.css"]
+            "matches": [
+                "https://bsky.app/*"
+            ],
+            "js": [
+                "content.js"
+            ],
+            "css": [
+                "service_workers/injected_stylesheets/bsky_styles.css"
+            ]
         }
     ]
 }

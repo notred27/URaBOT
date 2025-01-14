@@ -44,3 +44,11 @@
 .rabot_disclaimer button:hover {
   background-color: #1a1a1a;
 }
+
+
+.tmpDiv img{
+  width: 40px;
+  height: 40px;
+  margin: 10px;
+  margin-right: 0px;
+}

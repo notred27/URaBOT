@@ -238,6 +238,10 @@ async function getEstimatesGradio() {
                 tweetForm.append('is_verified', isVerified);
                 tweetForm.append('likes', likes);
 
+                var tmpDiv = document.createElement("div");
+                tmpDiv.innerHTML = `<img src=\"${chrome.runtime.getURL("icons/preloader.svg")}\"></img>`
+                tmpDiv.className = "tmpDiv"
+                tweet.appendChild(tmpDiv);
 
                 // Create fetch requests to the API endpoint
                 const fetchPromise = fetch('https://mreidy3-urabot.hf.space/gradio_api/call/predict', {
@@ -286,6 +290,12 @@ async function getEstimatesGradio() {
 
                                     foundTweets.push({ tweetId: psudoId, score: json.percent })
 
+                                    try {
+                                        tweet.getElementsByClassName('tmpDiv')[0].remove()
+                                        
+                                    } catch (error) {
+                                        
+                                    }
 
                                 }
                             })
@@ -295,6 +305,13 @@ async function getEstimatesGradio() {
                             // This is the response for querying a proceessed tweet / in process tweet
 
                             console.error("Exception occurred:", err)
+                        }
+
+                        try {
+                            tweet.getElementsByClassName('tmpDiv')[0].remove()
+                            
+                        } catch (error) {
+                            
                         }
 
                     })

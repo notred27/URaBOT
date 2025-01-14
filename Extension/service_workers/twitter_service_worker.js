@@ -119,6 +119,12 @@ async function getTwitterEstimates() {
             tweetForm.append('likes', payloadValues[4]);
 
 
+            var tmpDiv = document.createElement("div");
+            tmpDiv.innerHTML = `<img src=\"${chrome.runtime.getURL("icons/preloader.svg")}\"></img>`
+            tmpDiv.className = "tmpDiv"
+            tweet.appendChild(tmpDiv);
+
+
             // Create fetch requests to the API endpoint
             const fetchPromise = fetch(api_url.endpoint, {
                 method: "POST",
@@ -137,11 +143,26 @@ async function getTwitterEstimates() {
                         chrome.runtime.sendMessage({ message: 'update_tweets' });
                     });
 
+
+                    try {
+                        tweet.getElementsByClassName('tmpDiv')[0].remove()
+                        
+                    } catch (error) {
+                        
+                    }
+
                 })
                 .catch((err) => {
                     if (!err instanceof TypeError) {
                         // This is the response for querying a processed tweet / in process tweet
                         console.error("Exception occurred:", err)
+                    }
+
+                    try {
+                        tweet.getElementsByClassName('tmpDiv')[0].remove()
+                        
+                    } catch (error) {
+                        
                     }
 
                 })

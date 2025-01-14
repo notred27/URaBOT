@@ -121,7 +121,7 @@ async function getBskyEstimates() {
 
 
             var tmpDiv = document.createElement("div");
-            tmpDiv.innerText = "Loading..."
+            tmpDiv.innerHTML = `<img src=\"${chrome.runtime.getURL("icons/preloader.svg")}\"></img>`
             tmpDiv.className = "tmpDiv"
             feedItem.children[0].children[1].appendChild(tmpDiv);
 
@@ -146,12 +146,24 @@ async function getBskyEstimates() {
                         chrome.runtime.sendMessage({ message: 'update_tweets' });
                     });
 
+                    try {
+                        feedItem.getElementsByClassName('tmpDiv')[0].remove()
+                        
+                    } catch (error) {
+                        
+                    }
+
                 })
                 .catch((err) => {
                     console.error(err)
                     feedItem.getElementsByClassName('tmpDiv')[0].innerText = "409." + tweet_dict.process_tweets[psudoId]
 
-                    
+                    try {
+                        feedItem.getElementsByClassName('tmpDiv')[0].remove()
+                        
+                    } catch (error) {
+                        
+                    }
                     // Ensure that classification is added here if item has already been classified?
                 })
 
@@ -260,14 +272,6 @@ async function injectBskyClassification() {
                         // Inject the HTML onto the page
                         feedItem.children[0].children[1].appendChild(classificationDiv);
                         // feedItem.appendChild(classificationDiv);
-                    
-                        try {
-                            feedItem.getElementsByClassName('tmpDiv')[0].remove()
-                            
-                        } catch (error) {
-                            
-                        }
-
                     }
                 }
             })
