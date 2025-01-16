@@ -10,10 +10,11 @@ chrome.storage.local.get(['hide_bot_content'], (result) => {
     document.getElementById('hide_bot_content').checked = result.hide_bot_content;
 });
 
-
 chrome.storage.local.get(['api_endpoint'], (result) => {
     document.getElementById(result.api_endpoint).checked = true;
 });
+
+
 
 
 // Set slider hide bot content value when loading the popup HTML
@@ -75,8 +76,6 @@ document.querySelectorAll('input[name="api_endpoint"]').forEach(radio => {
         const selectedValue = event.target.value;
         console.log('Selected value:', selectedValue);
         chrome.storage.local.set({ api_endpoint: selectedValue })
-
-        // You can perform other actions here based on the selected radio button
     });
 });
 
@@ -84,9 +83,6 @@ document.querySelectorAll('input[name="api_endpoint"]').forEach(radio => {
 
 // Add function to debug button for testing API 
 document.getElementById('post_test').addEventListener('click', async () => {
-
-
-
 
     const endpoint = await chrome.storage.local.get(['api_endpoint'])
 
@@ -155,8 +151,5 @@ document.getElementById('post_test').addEventListener('click', async () => {
                 document.getElementById('verify_text_test').textContent = "Error connecting to HF Spaces"
                 console.error('Error:', error);
             });
-
     }
-
-
 });

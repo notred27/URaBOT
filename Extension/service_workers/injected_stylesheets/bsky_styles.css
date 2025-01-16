@@ -1,5 +1,5 @@
 .rabot_check {
-  background-color: black;
+  background-color: #161e27;
   height: 40px;
   width: 40px;
   min-width: 40px;
@@ -17,27 +17,34 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #1b1929;
+  background-color: #1c2e42;
   height: 60px;
   width: 80%;
   font-size: medium;
   font-weight: 300;
   text-align: center;
   border-radius: 5px;
-  margin-top: 80px;
-  margin-left: 30px;
-  color: white;
+  margin: 30px;
+  color: ivory;
 }
 
 .rabot_disclaimer button {
   color: rgb(56, 162, 255);
   padding: 3px;
   border-radius: 3px;
-  background-color: #1b1929;
-  border: 0px solid #1b1929;
+  background-color: #1c2e42;
+  border: 0px solid #1c2e42;
 }
 
 
 .rabot_disclaimer button:hover {
   background-color: #413d5a;
+}
+
+
+.tmpDiv img {
+  width: 40px;
+  height: 40px;
+  margin: 10px;
+  margin-right: 0px;
 }
