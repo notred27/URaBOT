@@ -1,5 +1,8 @@
 wandb/
-Training/trained_models/
+Models/trained_models/
 test_trainer/
 
 Extension/config.js
+API/dbTests
+API/__pycache__
+Training

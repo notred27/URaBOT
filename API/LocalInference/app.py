@@ -11,10 +11,21 @@ from dotenv import load_dotenv
 from transformers import AutoModelForSequenceClassification, AutoConfig, AutoTokenizer
 import numpy as np
 import torch
+from pymongo import MongoClient
 
 
 # Load environmental vars
 load_dotenv()
+
+
+
+# Connect to db
+MONGO_URI = os.getenv("MONGO_URI")
+client = MongoClient(MONGO_URI)
+db = client.get_database()
+tweet_results = db.classifications
+tweet_results.create_index("psudo_id", unique=True)
+
 
 
 MODEL_NAME = os.getenv('MODEL_NAME')
@@ -36,14 +47,24 @@ tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
 # Set hardware target for model
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-model.to(device)
-model.eval()    # Set model to evaluation mode
 
+# Load model from HF
+def load_model():
+    global model, tokenizer, config
+
+    model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=2)
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    config = AutoConfig.from_pretrained(MODEL_NAME)
+    model.to(device)
+    model.eval()
+    print("Model loaded!")
+
+load_model()
 
 # Set up the Flask app
 app = Flask(__name__)
 # Set up CORS control (tmp for localhost)
-CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})  # Target to allow traffic from
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 app.config['CORS_HEADERS'] = 'Content-Type'
 
 
@@ -64,9 +85,6 @@ def echo():
     return {"message": request.form["message"]}
 
 
-
-# TODO: GC for when this list gets too large?
-processed_tweets = {}
 
 @app.route('/verify', methods=['POST','OPTIONS'])
 @cross_origin(origin='*',headers=['Content-Type','Authorization'])  # Account for CORS
@@ -95,16 +113,15 @@ def verify():
     if 'tweet_content' not in request.form:
         return make_response(jsonify({"error": "Invalid request parameters.", "message" : "No tweet_content provided"}), 400)
         
-    # Prevent multiple requests for the same tweet
-    if request.form["psudo_id"] in processed_tweets.keys():
-        return jsonify({"percent": processed_tweets[request.form["psudo_id"]] })
+    # Prevent multiple requests for the same tweet    
+    psudo_id = request.form["psudo_id"]
+    existing = tweet_results.find_one({"psudo_id": psudo_id})
 
-        # return make_response(jsonify({"error": "Conflict, tweet is already being/has been processed"}), 409)
+    if existing:
+        return jsonify({"percent": existing["percent"]})
 
-
-    #========== Resolve Multiple Requests ==========#
-    # Add tweet to internal (backend) process list
-    processed_tweets[request.form["psudo_id"]] = -1
+    #========== Resolve Multiple Requests (Placeholder) ==========#
+    tweet_results.insert_one({"psudo_id": psudo_id, "percent": -1})
 
 
     #========== Return Classification ==========#
@@ -126,18 +143,20 @@ def verify():
     label = np.argmax(outputs.logits.detach().numpy(), axis=-1).item()
 
 
-
-
     # Return sigmoid-ish value for classification. Can instead return label for strict 0/1 binary classification
     if label == 0:
-        processed_tweets[request.form["psudo_id"]] = 1 -  sigmoid[0]
+        tweet_results.update_one(
+            {"psudo_id": psudo_id},
+            {"$set": {"percent": 1 -  sigmoid[0]}},
+            upsert=True
+        )
         return jsonify({"percent": 1 -  sigmoid[0]})
+    
     else:
-        processed_tweets[request.form["psudo_id"]] = sigmoid[1]
-
+        tweet_results.update_one(
+            {"psudo_id": psudo_id},
+            {"$set": {"percent": sigmoid[1]}},
+            upsert=True
+        )
         return jsonify({"percent": sigmoid[1] })
 
-
-# Start the server
-if __name__ == '__main__':
-    app.run(host ="0.0.0.0", port=5000)
