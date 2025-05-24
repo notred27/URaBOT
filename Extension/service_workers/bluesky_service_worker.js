@@ -230,7 +230,7 @@ async function getBskyEstimates() {
             var tmpDiv = document.createElement("div");
             tmpDiv.innerHTML = `<img src=\"${chrome.runtime.getURL("icons/preloader.svg")}\"></img>`
             tmpDiv.className = "tmpDiv"
-            feedItem.children[0].children[1].appendChild(tmpDiv);
+            feedItem.children[0].children[2].appendChild(tmpDiv);
 
             // Create fetch requests to the API endpoint
             const fetchPromise = fetch(api_url.endpoint, {
@@ -378,7 +378,7 @@ async function injectBskyClassification() {
                         }
 
                         // Inject the HTML onto the page
-                        feedItem.children[0].children[1].appendChild(classificationDiv);
+                        feedItem.children[0].children[2].appendChild(classificationDiv);
                         // feedItem.appendChild(classificationDiv);
                     }
                 }
@@ -474,7 +474,7 @@ async function injectBskyDisclaimers() {
 
                         if (foundTweets[psudoId] > threshold.bot_threshold) {
                             // Get all divs from the base tweet
-                            const content = feedItem.children[0].children[1].getElementsByTagName("div");
+                            const content = feedItem.children[0].children[2].getElementsByTagName("div");
 
                             // Hide all of the tweet's content
                             for (let i = 0; i < content.length; i++) {
@@ -499,7 +499,7 @@ async function injectBskyDisclaimers() {
                                 }
 
                                 // Remove disclaimer
-                                feedItem.children[0].children[1].getElementsByClassName('rabot_disclaimer')[0].remove()
+                                feedItem.children[0].children[2].getElementsByClassName('rabot_disclaimer')[0].remove()
 
 
                                 // Hack: prevent relabeling
@@ -522,13 +522,13 @@ async function injectBskyDisclaimers() {
                             // feedItem.style.height = "200px"; // TEMP: fix to prevent too many re-renders
 
                             // Inject the HTML
-                            feedItem.children[0].children[1].appendChild(disclaimerDiv);
+                            feedItem.children[0].children[2].appendChild(disclaimerDiv);
 
-                            if (feedItem.children[0].children[1].getElementsByClassName("rabot_check")[0] != null) {
-                                feedItem.children[0].children[1].insertBefore(disclaimerDiv, feedItem.children[0].children[1].getElementsByClassName("rabot_check")[0]);
+                            if (feedItem.children[0].children[2].getElementsByClassName("rabot_check")[0] != null) {
+                                feedItem.children[0].children[2].insertBefore(disclaimerDiv, feedItem.children[0].children[2].getElementsByClassName("rabot_check")[0]);
 
                             } else {
-                                feedItem.children[0].children[1].appendChild(disclaimerDiv);
+                                feedItem.children[0].children[2].appendChild(disclaimerDiv);
                             }
 
 
@@ -656,7 +656,7 @@ async function getBskyEstimatesGradio() {
                 var tmpDiv = document.createElement("div");
                 tmpDiv.innerHTML = `<img src=\"${chrome.runtime.getURL("icons/preloader.svg")}\"></img>`
                 tmpDiv.className = "tmpDiv"
-                feedItem.children[0].children[1].appendChild(tmpDiv);
+                feedItem.children[0].children[2].appendChild(tmpDiv);
 
 
 
@@ -704,7 +704,7 @@ async function getBskyEstimatesGradio() {
                                     foundTweets.push({ tweetId: psudoId, score: json.percent })
 
                                     try {
-                                        feedItem.children[0].children[1].getElementsByClassName('tmpDiv')[0].remove()
+                                        feedItem.children[0].children[2].getElementsByClassName('tmpDiv')[0].remove()
 
                                     } catch (error) {
 
@@ -725,7 +725,7 @@ async function getBskyEstimatesGradio() {
                         }
 
                         try {
-                            feedItem.children[0].children[1].getElementsByClassName('tmpDiv')[0].remove()
+                            feedItem.children[0].children[2].getElementsByClassName('tmpDiv')[0].remove()
 
                         } catch (error) {
 
