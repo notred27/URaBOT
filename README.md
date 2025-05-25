@@ -14,7 +14,20 @@
 URaBOT is a Chrome extension that offers real-time detection of bot accounts on Twitter (X) and Bluesky. By leveraging fine-tuned machine learning models, it enhances user experience by identifying and flagging potential bot profiles directly within your browser.
 </div>
 
+</br>
+
 ## Features
+
+
+<table>
+  <tr>
+    <td>
+
+<img src="Figures/popup2.PNG" />
+
+_URaBOT Extension dropdown menu_
+</td>
+    <td>
 
 - **Real-Time Detection**: Analyzes content as you browse, providing immediate feedback on potential bot accounts.
     
@@ -24,6 +37,43 @@ URaBOT is a Chrome extension that offers real-time detection of bot accounts on 
     
 - **User-Friendly Interface**: Displays clear indicators and information to help users make informed decisions about the accounts they interact with.
     
+</td>
+  </tr>
+
+
+</table>
+
+
+
+### Example Classifications
+
+
+<table>
+  <tr>
+    <td>
+
+<img src="Figures/example1.PNG" />
+          
+_Example of a post classified as genuine._
+          
+</td>
+
+<td>
+
+<img src="Figures/example2.PNG" />
+            
+_Example of a post classified as bot content._
+          
+</td>
+          
+  </tr>
+  
+</table>
+
+
+</br>
+</br>
+
 
 ## Extension Installation
 
@@ -45,6 +95,7 @@ After these steps, URaBOT should then appear as an installed extension on this p
 
 > For more help, check out additional information about loading a custom extension [here.](https://knowledge.workspace.google.com/kb/load-unpacked-extensions-000005962)
 
+</br>
 
 
 ## Model Installation
@@ -79,8 +130,7 @@ docker-compose down
 ```
 
 
-
-### Build Your Own Image
+#### Building Your Own Image
 
 Alternatively, you can build your own image to test our different models.
 > This is not required to run the extension, and is instead an optional path for more advanced users.
