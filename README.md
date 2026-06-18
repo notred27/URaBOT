@@ -1,4 +1,3 @@
-
 <div align="center">
 <img src="Extension/icons/icon128.png" />
 
@@ -10,14 +9,21 @@
 
 ![Google Chrome](https://img.shields.io/badge/Google%20Chrome-4285F4?style=for-the-badge&logo=GoogleChrome&logoColor=white)
 
+URaBOT is a Chrome extension that injects bot likelihood scores directly into Twitter and Bluesky feeds by sending post content to a fine-tuned DeBERTa V3 classifier running either locally via Docker or remotely via a Hugging Face Space.
 
-URaBOT is a Chrome extension that offers real-time detection of bot accounts on Twitter (X) and Bluesky. By leveraging fine-tuned machine learning models, it enhances user experience by identifying and flagging potential bot profiles directly within your browser.
 </div>
 
 </br>
 
-## Features
+## Model Performance
 
+| Model | Accuracy | F1 Score | Dataset |
+|---|---|---|---|
+| DeBERTa V3 (full feature) | 85% | 0.79 | 37k+ tweets |
+
+</br>
+
+## Features
 
 <table>
   <tr>
@@ -39,14 +45,9 @@ _URaBOT Extension dropdown menu_
     
 </td>
   </tr>
-
-
 </table>
 
-
-
 ### Example Classifications
-
 
 <table>
   <tr>
@@ -67,13 +68,10 @@ _Example of a post classified as bot content._
 </td>
           
   </tr>
-  
 </table>
 
-
 </br>
 </br>
-
 
 ## Extension Installation
 
@@ -87,7 +85,7 @@ git clone https://github.com/notred27/URaBOT.git
 
 2. Load the Extension
 
--  Navigate to `chrome://extensions/` in your Chrome browser.
+- Navigate to `chrome://extensions/` in your Chrome browser.
 - Toggle the switch in the top right corner to enable Developer Mode.
 - Click on "Load unpacked" and select the cloned `URaBOT/Extension` directory.
 
@@ -97,8 +95,8 @@ After these steps, URaBOT should then appear as an installed extension on this p
 
 </br>
 
-
 ## Model Installation
+
 ### Remote Model
 
 To run the classifiers without local hosting, users can select the `Gradio API` option in the extension dropdown menu. While easiest for a user, this API can be slow and lead to poor extension performance.
@@ -110,7 +108,6 @@ To run the classifiers without local hosting, users can select the `Gradio API` 
 To improve extension performance and ensure privacy, you can host the machine learning models **locally** using Docker. This spins up a local server (containing a MongoDB database) that the URaBOT Chrome extension can directly communicate with for an improved user experience.
 
 > This requires Docker. [Learn more about getting started with Docker.](https://www.docker.com/get-started/)
-
 
 Pull the latest image of this project:
 ```
@@ -129,7 +126,6 @@ To stop the local container, run
 docker-compose down
 ```
 
-
 #### Building Your Own Image
 
 Alternatively, you can build your own image to test our different models.
@@ -146,8 +142,6 @@ You can adjust the environmental variables found in the [.env](API/LocalInferenc
 - `URaBOT2024/distilledbert_FullFeature`: A fine-tuned model extending a [distilled BERT model](https://huggingface.co/distilbert/distilbert-base-uncased) intended for sequence classification, and is not case-sensitive.
 
 After selecting a model and parameters, use the previous Docker commands to run/stop the model as before.
-
-
 
 ## Limitations
 
